@@ -1,14 +1,73 @@
 // src/pages/Calendar.js
-import React, { useState } from 'react';
-import { format, addMonths, subMonths } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import Layout from '../components/layout/Layout';
+
+// Dati fittizi per le attività
+const MOCK_ACTIVITIES = [
+  { id: 1, date: '2023-11-15', type: 'walk', title: 'Morning Walk', completed: true },
+  { id: 2, date: '2023-11-15', type: 'food', title: 'Lunch', completed: true },
+  { id: 3, date: '2023-11-16', type: 'vet', title: 'Vaccination', completed: false },
+  { id: 4, date: '2023-11-20', type: 'play', title: 'Park Visit', completed: false },
+  { id: 5, date: '2023-11-25', type: 'walk', title: 'Evening Walk', completed: false },
+];
+
+// Componente di loading semplice
+function Loader() {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+        <div className="mb-4">
+          <div className="w-12 h-12 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
+        </div>
+        <p className="text-gray-700">Loading activities...</p>
+      </div>
+    </div>
+  );
+}
 
 function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Carica i dati
+  useEffect(() => {
+    // Simuliamo una chiamata API con un timeout
+    const timer = setTimeout(() => {
+      setActivities(MOCK_ACTIVITIES);
+      setLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []); // Nota: array vuoto per eseguire solo al mount
+  
+  // Resto del codice del calendario rimane uguale
   
   // Gestori per navigare tra i mesi
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  
+  // Vai a "oggi"
+  const goToToday = () => {
+    setCurrentMonth(new Date());
+    setSelectedDate(new Date());
+  };
+  
+  // Verifica se una data ha attività
+  const hasActivities = (date) => {
+    return activities.some(activity => 
+      isSameDay(parseISO(activity.date), date)
+    );
+  };
+  
+  // Ottieni le attività per la data selezionata
+  const getActivitiesForDate = (date) => {
+    return activities.filter(activity => 
+      isSameDay(parseISO(activity.date), date)
+    );
+  };
   
   // Array con i nomi dei giorni della settimana
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,16 +87,29 @@ function Calendar() {
     
     // Giorni del mese
     for (let day = 1; day <= daysInMonth; day++) {
-      const isToday = new Date().getDate() === day && 
-                      new Date().getMonth() === currentMonth.getMonth() && 
-                      new Date().getFullYear() === currentMonth.getFullYear();
+      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+      const _isToday = isToday(date);
+      const isSelected = isSameDay(date, selectedDate);
+      const hasDayActivities = hasActivities(date);
       
       days.push(
         <div 
           key={day} 
-          className={`p-2 text-center ${isToday ? 'bg-primary text-white rounded-full' : ''}`}
+          className={`p-2 text-center cursor-pointer relative ${
+            _isToday ? 'font-bold' : ''
+          } ${
+            isSelected ? 'bg-primary text-white rounded-lg' : ''
+          }`}
+          onClick={() => setSelectedDate(date)}
         >
           {day}
+          
+          {/* Activity indicators */}
+          {hasDayActivities && !isSelected && (
+            <div className="absolute bottom-1 left-0 right-0 flex justify-center space-x-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+            </div>
+          )}
         </div>
       );
     }
@@ -45,8 +117,31 @@ function Calendar() {
     return days;
   };
   
+  // Attività per la data selezionata
+  const selectedDateActivities = getActivitiesForDate(selectedDate);
+  
+  // Colori per i tipi di attività
+  const activityColors = {
+    walk: 'bg-blue-500',
+    food: 'bg-orange-500',
+    vet: 'bg-red-500',
+    play: 'bg-green-500'
+  };
+  
   return (
     <Layout>
+      {loading && <Loader />}
+      
+      <div className="mb-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Calendar</h1>
+        <button 
+          onClick={goToToday}
+          className="px-3 py-1 bg-primary text-white rounded-lg text-sm"
+        >
+          Today
+        </button>
+      </div>
+      
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-4">
           <button 
@@ -80,15 +175,54 @@ function Calendar() {
       </div>
       
       <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4">Today's Activities</h3>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-center text-gray-500 py-4">
-            No activities scheduled for today
-          </div>
-          <button className="w-full mt-2 bg-primary text-white rounded-lg py-2 flex items-center justify-center">
-            <span className="mr-2">+</span> Add Activity
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold">
+            Activities for {format(selectedDate, 'MMMM d, yyyy')}
+          </h3>
+          <button className="p-2 bg-primary text-white rounded-full">
+            +
           </button>
         </div>
+        
+        {selectedDateActivities.length > 0 ? (
+          <div className="space-y-3">
+            {selectedDateActivities.map(activity => (
+              <div 
+                key={activity.id} 
+                className="bg-white rounded-lg shadow p-4 flex items-center"
+              >
+                <div className={`w-10 h-10 rounded-full ${activityColors[activity.type]} flex items-center justify-center text-white mr-3`}>
+                  {activity.type === 'walk' && '🚶'}
+                  {activity.type === 'food' && '🍖'}
+                  {activity.type === 'vet' && '💉'}
+                  {activity.type === 'play' && '🎾'}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium">{activity.title}</h4>
+                  <p className="text-sm text-gray-500">
+                    {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                  </p>
+                </div>
+                <div className="w-6 h-6">
+                  {activity.completed ? (
+                    <div className="w-6 h-6 bg-success rounded-full flex items-center justify-center text-white">
+                      ✓
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 py-8">
+            No activities scheduled for this day
+            <button className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center">
+              <span className="mr-2">+</span> Add Activity
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
   );
