@@ -1,9 +1,8 @@
-// src/pages/Calendar.js
-import React, { useState, useEffect } from 'react';
+// src/pages/Calendar.js - versione aggiornata senza loader
+import React, { useState } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
-import Layout from '../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
-
+import Layout from '../components/layout/Layout';
 
 // Dati fittizi per le attività
 const MOCK_ACTIVITIES = [
@@ -14,40 +13,11 @@ const MOCK_ACTIVITIES = [
   { id: 5, date: '2023-11-25', type: 'walk', title: 'Evening Walk', completed: false },
 ];
 
-// Componente di loading semplice
-function Loader() {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-        <div className="mb-4">
-          <div className="w-12 h-12 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
-        </div>
-        <p className="text-gray-700">Loading activities...</p>
-      </div>
-    </div>
-  );
-}
-
 function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [activities] = useState(MOCK_ACTIVITIES); // Inizializzato direttamente
   const navigate = useNavigate();
-
-  
-  // Carica i dati
-  useEffect(() => {
-    // Simuliamo una chiamata API con un timeout
-    const timer = setTimeout(() => {
-      setActivities(MOCK_ACTIVITIES);
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []); // Nota: array vuoto per eseguire solo al mount
-  
-  // Resto del codice del calendario rimane uguale
   
   // Gestori per navigare tra i mesi
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -134,8 +104,6 @@ function Calendar() {
   
   return (
     <Layout>
-      {loading && <Loader />}
-      
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Calendar</h1>
         <button 
@@ -187,8 +155,8 @@ function Calendar() {
             className="p-2 bg-primary text-white rounded-full"
             onClick={() => navigate('/add')}
           >
-          +
-        </button>
+            +
+          </button>
         </div>
         
         {selectedDateActivities.length > 0 ? (
@@ -226,11 +194,11 @@ function Calendar() {
           <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 py-8">
             No activities scheduled for this day
             <button 
-  className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
-  onClick={() => navigate('/add')}
->
-  <span className="mr-2">+</span> Add Activity
-</button>
+              className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
+              onClick={() => navigate('/add')}
+            >
+              <span className="mr-2">+</span> Add Activity
+            </button>
           </div>
         )}
       </div>

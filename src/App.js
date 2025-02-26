@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Calendar from './pages/Calendar';
 import AddActivity from './pages/AddActivity';
+import Dogs from './pages/Dogs';
+import DogDetail from './pages/DogDetail';
+import AddDog from './pages/AddDog';
 
 function Home() {
   return (
@@ -16,12 +19,18 @@ function Home() {
         <p className="text-gray-600 mt-2">Your dog's life, organized</p>
         
         <div className="mt-8 grid grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div 
+            className="bg-white p-6 rounded-lg shadow-md cursor-pointer"
+            onClick={() => window.location.href = '/calendar'}
+          >
             <div className="text-2xl mb-2">📅</div>
             <h2 className="font-bold">Calendar</h2>
             <p className="text-sm text-gray-600">Track daily activities</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div 
+            className="bg-white p-6 rounded-lg shadow-md cursor-pointer"
+            onClick={() => window.location.href = '/dogs'}
+          >
             <div className="text-2xl mb-2">🐕</div>
             <h2 className="font-bold">Dog Profile</h2>
             <p className="text-sm text-gray-600">Manage your pet's info</p>
@@ -49,6 +58,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/add" element={<AddActivity />} />
+        <Route path="/dogs" element={<Dogs />} />
+        <Route path="/dogs/:dogId" element={<DogDetail />} />
+        <Route path="/dogs/new" element={<AddDog />} />
       </Routes>
     </Router>
   );
