@@ -1,22 +1,87 @@
-// src/pages/Calendar.js - versione aggiornata senza loader
-import React, { useState } from 'react';
+// src/pages/Calendar.js - versione corretta
+import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import ActivityFilters from '../components/activities/ActivityFilters';
+import { MOCK_ACTIVITIES } from '../data/mockData';
 
-// Dati fittizi per le attività
+/* Dati fittizi per le attività
 const MOCK_ACTIVITIES = [
   { id: 1, date: '2023-11-15', type: 'walk', title: 'Morning Walk', completed: true },
   { id: 2, date: '2023-11-15', type: 'food', title: 'Lunch', completed: true },
   { id: 3, date: '2023-11-16', type: 'vet', title: 'Vaccination', completed: false },
   { id: 4, date: '2023-11-20', type: 'play', title: 'Park Visit', completed: false },
   { id: 5, date: '2023-11-25', type: 'walk', title: 'Evening Walk', completed: false },
-];
+];*/
 
 function Calendar() {
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activities] = useState(MOCK_ACTIVITIES); // Inizializzato direttamente
-  const navigate = useNavigate();
+  const [activities, setActivities] = useState(MOCK_ACTIVITIES);
+  const [filteredActivities, setFilteredActivities] = useState([]);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [filters, setFilters] = useState({
+    type: 'all',
+    status: 'all',
+    sort: 'time-asc'
+  });
+  
+  // Applica filtri e ordinamento alle attività
+  useEffect(() => {
+    // Filtriamo per data
+    let result = activities.filter(activity => 
+      isSameDay(parseISO(activity.date), selectedDate)
+    );
+    
+    // Filtriamo per tipo
+    if (filters.type !== 'all') {
+      result = result.filter(activity => activity.type === filters.type);
+    }
+    
+    // Filtriamo per stato
+    if (filters.status !== 'all') {
+      const isCompleted = filters.status === 'completed';
+      result = result.filter(activity => activity.completed === isCompleted);
+    }
+    
+    // Applichiamo l'ordinamento
+    result = [...result].sort((a, b) => {
+      // Ordina per orario (prima i più precoci)
+      if (filters.sort === 'time-asc') {
+        return a.time.localeCompare(b.time);
+      }
+      // Ordina per orario (prima i più tardivi)
+      else if (filters.sort === 'time-desc') {
+        return b.time.localeCompare(a.time);
+      }
+      // Ordina per tipo di attività
+      else if (filters.sort === 'type') {
+        return a.type.localeCompare(b.type);
+      }
+      // Ordina per priorità
+      else if (filters.sort === 'priority') {
+        const priorityOrder = { high: 0, normal: 1, low: 2 };
+        const aPriority = a.priority || 'normal';
+        const bPriority = b.priority || 'normal';
+        return priorityOrder[aPriority] - priorityOrder[bPriority];
+      }
+      return 0;
+    });
+    
+    setFilteredActivities(result);
+  }, [selectedDate, activities, filters]);
+  
+  // Gestisce il toggle di completamento
+  const handleToggleComplete = (activityId) => {
+    setActivities(
+      activities.map(activity => 
+        activity.id === activityId 
+          ? { ...activity, completed: !activity.completed } 
+          : activity
+      )
+    );
+  };
   
   // Gestori per navigare tra i mesi
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -27,17 +92,14 @@ function Calendar() {
     setCurrentMonth(new Date());
     setSelectedDate(new Date());
   };
+
+  const goToDay = (date) => {
+    navigate(`/day/${format(date, 'yyyy-MM-dd')}`);
+  };
   
   // Verifica se una data ha attività
   const hasActivities = (date) => {
     return activities.some(activity => 
-      isSameDay(parseISO(activity.date), date)
-    );
-  };
-  
-  // Ottieni le attività per la data selezionata
-  const getActivitiesForDate = (date) => {
-    return activities.filter(activity => 
       isSameDay(parseISO(activity.date), date)
     );
   };
@@ -73,7 +135,10 @@ function Calendar() {
           } ${
             isSelected ? 'bg-primary text-white rounded-lg' : ''
           }`}
-          onClick={() => setSelectedDate(date)}
+          onClick={() => {
+            setSelectedDate(date);
+            goToDay(date);
+          }}
         >
           {day}
           
@@ -90,28 +155,45 @@ function Calendar() {
     return days;
   };
   
-  // Attività per la data selezionata
-  const selectedDateActivities = getActivitiesForDate(selectedDate);
-  
   // Colori per i tipi di attività
   const activityColors = {
     walk: 'bg-blue-500',
     food: 'bg-orange-500',
     vet: 'bg-red-500',
-    play: 'bg-green-500'
+    play: 'bg-green-500',
+    water: 'bg-cyan-500',
+    medicine: 'bg-purple-500',
+    groom: 'bg-yellow-500',
+    training: 'bg-pink-500'
   };
   
   return (
     <>
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Calendar</h1>
-        <button 
-          onClick={goToToday}
-          className="px-3 py-1 bg-primary text-white rounded-lg text-sm"
-        >
-          Today
-        </button>
+        <div className="flex space-x-2">
+          <button 
+            onClick={goToToday}
+            className="px-3 py-1 bg-primary text-white rounded-lg text-sm"
+          >
+            Today
+          </button>
+          <button 
+            onClick={() => setFiltersVisible(!filtersVisible)}
+            className={`p-2 rounded-full ${filtersVisible ? 'bg-primary text-white' : 'bg-gray-100'}`}
+          >
+            🔍
+          </button>
+        </div>
       </div>
+      
+      {/* Filters Section (collapsible) */}
+      {filtersVisible && (
+        <ActivityFilters 
+          filters={filters} 
+          setFilters={setFilters} 
+        />
+      )}
       
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-4">
@@ -158,32 +240,43 @@ function Calendar() {
           </button>
         </div>
         
-        {selectedDateActivities.length > 0 ? (
+        {filteredActivities.length > 0 ? (
           <div className="space-y-3">
-            {selectedDateActivities.map(activity => (
+            {filteredActivities.map(activity => (
               <div 
                 key={activity.id} 
                 className="bg-white rounded-lg shadow p-4 flex items-center"
+                onClick={() => navigate(`/activity/edit/${activity.id}`)}
               >
-                <div className={`w-10 h-10 rounded-full ${activityColors[activity.type]} flex items-center justify-center text-white mr-3`}>
+                <div className={`w-10 h-10 rounded-full ${activityColors[activity.type] || 'bg-gray-300'} flex items-center justify-center text-white mr-3`}>
                   {activity.type === 'walk' && '🚶'}
                   {activity.type === 'food' && '🍖'}
                   {activity.type === 'vet' && '💉'}
                   {activity.type === 'play' && '🎾'}
+                  {activity.type === 'water' && '💧'}
+                  {activity.type === 'medicine' && '💊'}
+                  {activity.type === 'groom' && '✂️'}
+                  {activity.type === 'training' && '🏋️'}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium">{activity.title}</h4>
                   <p className="text-sm text-gray-500">
-                    {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                    {activity.time} • {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
                   </p>
                 </div>
-                <div className="w-6 h-6">
+                <div className="w-6 h-6" onClick={(e) => e.stopPropagation()}>
                   {activity.completed ? (
-                    <div className="w-6 h-6 bg-success rounded-full flex items-center justify-center text-white">
+                    <div 
+                      className="w-6 h-6 bg-success rounded-full flex items-center justify-center text-white"
+                      onClick={() => handleToggleComplete(activity.id)}
+                    >
                       ✓
                     </div>
                   ) : (
-                    <div className="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                    <div 
+                      className="w-6 h-6 border-2 border-gray-300 rounded-full"
+                      onClick={() => handleToggleComplete(activity.id)}
+                    ></div>
                   )}
                 </div>
               </div>
@@ -191,13 +284,27 @@ function Calendar() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 py-8">
-            No activities scheduled for this day
-            <button 
-              className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
-              onClick={() => navigate('/add')}
-            >
-              <span className="mr-2">+</span> Add Activity
-            </button>
+            {filters.type !== 'all' || filters.status !== 'all' ? (
+              <>
+                <p>No activities match the selected filters</p>
+                <button 
+                  className="mt-2 text-primary"
+                  onClick={() => setFilters({type: 'all', status: 'all', sort: 'time-asc'})}
+                >
+                  Clear Filters
+                </button>
+              </>
+            ) : (
+              <>
+                <p>No activities scheduled for this day</p>
+                <button 
+                  className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
+                  onClick={() => navigate('/add')}
+                >
+                  <span className="mr-2">+</span> Add Activity
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
