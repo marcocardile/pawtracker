@@ -1,7 +1,6 @@
 // src/pages/Dogs.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/layout/Layout';
 
 // Dati fittizi per i cani
 const MOCK_DOGS = [
@@ -43,7 +42,7 @@ function Dogs() {
   };
   
   return (
-    <Layout>
+    <>
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">My Dogs</h1>
         <button
@@ -93,7 +92,7 @@ function Dogs() {
           </button>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
 

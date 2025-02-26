@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import Layout from '../components/layout/Layout';
 
 function AddActivity() {
   const navigate = useNavigate();
@@ -58,7 +57,7 @@ function AddActivity() {
   };
   
   return (
-    <Layout>
+    <>
       <div className="mb-4 flex items-center">
         <button 
           onClick={() => navigate('/calendar')}
@@ -209,7 +208,7 @@ function AddActivity() {
           </button>
         </div>
       </form>
-    </Layout>
+    </>
   );
 }
 

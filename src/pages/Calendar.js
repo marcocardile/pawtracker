@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/layout/Layout';
 
 // Dati fittizi per le attività
 const MOCK_ACTIVITIES = [
@@ -103,7 +102,7 @@ function Calendar() {
   };
   
   return (
-    <Layout>
+    <>
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Calendar</h1>
         <button 
@@ -202,7 +201,7 @@ function Calendar() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   );
 }
 

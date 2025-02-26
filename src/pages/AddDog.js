@@ -1,7 +1,6 @@
 // src/pages/AddDog.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/layout/Layout';
 
 function AddDog() {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ function AddDog() {
   };
   
   return (
-    <Layout>
+    <>
       <div className="mb-4 flex items-center">
         <button 
           onClick={() => navigate('/dogs')}
@@ -228,7 +227,7 @@ function AddDog() {
           </button>
         </div>
       </form>
-    </Layout>
+    </>
   );
 }
 

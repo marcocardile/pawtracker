@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import Layout from '../components/layout/Layout';
 
 // Dati fittizi per i cani
 const MOCK_DOGS = [
@@ -123,17 +122,17 @@ function DogDetail() {
   // Se è in caricamento o non è stato trovato il cane
   if (loading) {
     return (
-      <Layout>
+      <>
         <div className="flex justify-center items-center h-64">
           <div className="w-8 h-8 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
         </div>
-      </Layout>
+      </>
     );
   }
   
   if (!dog) {
     return (
-      <Layout>
+      <>
         <div className="bg-white rounded-lg shadow p-6 text-center">
           <div className="text-5xl mb-4">🔍</div>
           <h2 className="text-xl font-bold mb-2">Dog not found</h2>
@@ -145,12 +144,12 @@ function DogDetail() {
             Back to My Dogs
           </button>
         </div>
-      </Layout>
+      </>
     );
   }
   
   return (
-    <Layout>
+    <>
       <div className="mb-4 flex items-center">
         <button 
           onClick={() => navigate('/dogs')}
@@ -346,7 +345,7 @@ function DogDetail() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   );
 }
 
