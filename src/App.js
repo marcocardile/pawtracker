@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Calendar from './pages/Calendar';
+import AddActivity from './pages/AddActivity';
 
 function Home() {
   return (
@@ -47,6 +48,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/add" element={<AddActivity />} />
       </Routes>
     </Router>
   );

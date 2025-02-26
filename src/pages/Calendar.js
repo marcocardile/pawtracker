@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import Layout from '../components/layout/Layout';
+import { useNavigate } from 'react-router-dom';
+
 
 // Dati fittizi per le attività
 const MOCK_ACTIVITIES = [
@@ -31,6 +33,8 @@ function Calendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
   
   // Carica i dati
   useEffect(() => {
@@ -179,9 +183,12 @@ function Calendar() {
           <h3 className="text-lg font-bold">
             Activities for {format(selectedDate, 'MMMM d, yyyy')}
           </h3>
-          <button className="p-2 bg-primary text-white rounded-full">
-            +
-          </button>
+          <button 
+            className="p-2 bg-primary text-white rounded-full"
+            onClick={() => navigate('/add')}
+          >
+          +
+        </button>
         </div>
         
         {selectedDateActivities.length > 0 ? (
@@ -218,9 +225,12 @@ function Calendar() {
         ) : (
           <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 py-8">
             No activities scheduled for this day
-            <button className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center">
-              <span className="mr-2">+</span> Add Activity
-            </button>
+            <button 
+  className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
+  onClick={() => navigate('/add')}
+>
+  <span className="mr-2">+</span> Add Activity
+</button>
           </div>
         )}
       </div>
