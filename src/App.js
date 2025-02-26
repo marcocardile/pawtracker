@@ -11,10 +11,26 @@ import AddDog from './pages/AddDog';
 import Home from './pages/Home';
 import EditActivity from './pages/EditActivity';
 import DayView from './pages/DayView';
+import { AuthProvider } from './contexts/AuthContext';
+
+
+console.log("AuthProvider:", AuthProvider);
+console.log("Layout:", Layout);
+console.log("Home:", Home);
+console.log("Calendar:", Calendar);
+console.log("AddActivity:", AddActivity);
+console.log("Dogs:", Dogs);
+console.log("DogDetail:", DogDetail);
+console.log("AddDog:", AddDog);
+console.log("EditActivity:", EditActivity);
+console.log("DayView:", DayView);
+
+
 
 function App() {
   return (
     <Router>
+      <AuthProvider>
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -27,6 +43,7 @@ function App() {
           <Route path="/dogs/new" element={<AddDog />} />
         </Routes>
       </Layout>
+      </AuthProvider>
     </Router>
   );
 }
