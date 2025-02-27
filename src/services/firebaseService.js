@@ -1,4 +1,5 @@
 // src/services/firebaseService.js
+import { setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -12,6 +13,55 @@ import {
   where,
   serverTimestamp 
 } from 'firebase/firestore';
+
+// Users
+export const createUserDocument = async (user, additionalData = {}) => {
+    if (!user) return;
+    
+    const userRef = doc(db, "users", user.uid);
+    const snapshot = await getDoc(userRef);
+    
+    // Se l'utente non esiste già in Firestore, crealo
+    if (!snapshot.exists()) {
+      const { email, displayName, photoURL } = user;
+      const createdAt = serverTimestamp();
+      
+      try {
+        await setDoc(userRef, {
+          uid: user.uid,
+          email,
+          displayName,
+          photoURL,
+          createdAt,
+          ...additionalData
+        });
+      } catch (error) {
+        console.error("Error creating user document", error);
+      }
+    }
+    
+    return userRef;
+  };
+  
+  export const updateUserDocument = async (userId, userData) => {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      ...userData,
+      updatedAt: serverTimestamp()
+    });
+  };
+  
+  export const getUserDocument = async (userId) => {
+    const userRef = doc(db, "users", userId);
+    const snapshot = await getDoc(userRef);
+    if (snapshot.exists()) {
+      return {
+        id: snapshot.id,
+        ...snapshot.data()
+      };
+    }
+    return null;
+  };
 
 // Dogs
 export const fetchDogs = async (userId) => {

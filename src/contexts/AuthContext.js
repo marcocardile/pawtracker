@@ -1,5 +1,6 @@
 // src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createUserDocument } from '../services/firebaseService';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -22,8 +23,14 @@ export function AuthProvider({ children }) {
   function register(email, password, name) {
     return createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
+        // Aggiorna il profilo di Firebase Auth con il nome
         return updateProfile(userCredential.user, {
           displayName: name
+        }).then(() => {
+          // Ora crea anche un documento utente in Firestore
+          return createUserDocument(userCredential.user, { name });
+        }).then(() => {
+          return userCredential.user;
         });
       });
   }

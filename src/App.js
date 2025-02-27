@@ -2,6 +2,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import { db } from './firebase';
+
 
 // Pagine principali
 import Home from './pages/Home';
@@ -53,5 +55,6 @@ function App() {
     </Router>
   );
 }
+console.log("Firebase connection:", db ? "Established" : "Failed");
 
 export default App;

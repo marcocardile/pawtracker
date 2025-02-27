@@ -1,4 +1,4 @@
-// src/pages/Calendar.js - versione corretta
+// src/pages/Calendar.js
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -6,81 +6,73 @@ import ActivityFilters from '../components/activities/ActivityFilters';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchActivities, updateActivity } from '../services/firebaseService';
 
-// import { MOCK_ACTIVITIES } from '../data/mockData';
-
-/* Dati fittizi per le attività
-const MOCK_ACTIVITIES = [
-  { id: 1, date: '2023-11-15', type: 'walk', title: 'Morning Walk', completed: true },
-  { id: 2, date: '2023-11-15', type: 'food', title: 'Lunch', completed: true },
-  { id: 3, date: '2023-11-16', type: 'vet', title: 'Vaccination', completed: false },
-  { id: 4, date: '2023-11-20', type: 'play', title: 'Park Visit', completed: false },
-  { id: 5, date: '2023-11-25', type: 'walk', title: 'Evening Walk', completed: false },
-];*/
-
-
 function Calendar() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  // Inizializza come array vuoto
   const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     type: 'all',
     status: 'all',
     sort: 'time-asc'
   });
-  
-  // Applica filtri e ordinamento alle attività
+
+  // Fetch activities from Firebase
   useEffect(() => {
-    const loadActivities = async () => {
-      if (currentUser) {
-        try {
-          const fetchedActivities = await fetchActivities(currentUser.uid);
-          setActivities(fetchedActivities);
-        } catch (error) {
-          console.error("Error fetching activities:", error);
-        }
+    async function getActivities() {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const activitiesData = await fetchActivities(currentUser.uid);
+        setActivities(activitiesData);
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      } finally {
+        setLoading(false);
       }
-    };
+    }
     
-    loadActivities();
+    getActivities();
   }, [currentUser]);
 
+  // Apply filters and sorting to activities
   useEffect(() => {
-    // Filtriamo per data
-    let result = activities.filter(activity => 
+    // Filter by date
+    let result = activities.filter(activity =>
       isSameDay(parseISO(activity.date), selectedDate)
     );
     
-    // Filtriamo per tipo
+    // Filter by type
     if (filters.type !== 'all') {
       result = result.filter(activity => activity.type === filters.type);
     }
     
-    // Filtriamo per stato
+    // Filter by status
     if (filters.status !== 'all') {
       const isCompleted = filters.status === 'completed';
       result = result.filter(activity => activity.completed === isCompleted);
     }
     
-    // Applichiamo l'ordinamento
+    // Apply sorting
     result = [...result].sort((a, b) => {
-      // Ordina per orario (prima i più precoci)
+      // Sort by time (earlier first)
       if (filters.sort === 'time-asc') {
         return a.time.localeCompare(b.time);
       }
-      // Ordina per orario (prima i più tardivi)
+      // Sort by time (later first)
       else if (filters.sort === 'time-desc') {
         return b.time.localeCompare(a.time);
       }
-      // Ordina per tipo di attività
+      // Sort by activity type
       else if (filters.sort === 'type') {
         return a.type.localeCompare(b.type);
       }
-      // Ordina per priorità
+      // Sort by priority
       else if (filters.sort === 'priority') {
         const priorityOrder = { high: 0, normal: 1, low: 2 };
         const aPriority = a.priority || 'normal';
@@ -92,73 +84,68 @@ function Calendar() {
     
     setFilteredActivities(result);
   }, [selectedDate, activities, filters]);
-  
-  // Gestisce il toggle di completamento
-const handleToggleComplete = async (activityId) => {
-  // Trova l'attività da aggiornare
-  const activity = activities.find(a => a.id === activityId);
-  
-  if (activity) {
-    // Aggiorna lo stato locale per un feedback immediato
-    setActivities(
-      activities.map(a => 
-        a.id === activityId 
-          ? { ...a, completed: !a.completed } 
-          : a
-      )
-    );
-    
-    // Aggiorna anche su Firestore
+
+  // Toggle completion status
+  const handleToggleComplete = async (activityId) => {
     try {
-      await updateActivity(activityId, { 
-        ...activity, 
-        completed: !activity.completed 
+      // Find the activity to toggle
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) return;
+      
+      // Update in state
+      const updatedActivities = activities.map(a => 
+        a.id === activityId ? {...a, completed: !a.completed} : a
+      );
+      setActivities(updatedActivities);
+      
+      // Update in Firebase
+      await updateActivity(activityId, {
+        completed: !activity.completed
       });
     } catch (error) {
       console.error("Error updating activity:", error);
-      // Potresti voler ripristinare lo stato locale in caso di errore
+      // Revert changes in case of error
+      setActivities([...activities]);
     }
-  }
-};
-  
-  // Gestori per navigare tra i mesi
+  };
+
+  // Month navigation
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   
-  // Vai a "oggi"
+  // Go to today
   const goToToday = () => {
     setCurrentMonth(new Date());
     setSelectedDate(new Date());
   };
-
+  
+  // Navigate to day view
   const goToDay = (date) => {
     navigate(`/day/${format(date, 'yyyy-MM-dd')}`);
   };
-  
-  // Verifica se una data ha attività
+
+  // Check if a date has activities
   const hasActivities = (date) => {
-    return activities.some(activity => 
+    return activities.some(activity =>
       isSameDay(parseISO(activity.date), date)
     );
   };
-  
-  // Array con i nomi dei giorni della settimana
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
-  // Genera i giorni del mese
+
+  // Generate calendar days
   const generateCalendarDays = () => {
+    // Calendar generation logic remains the same
     const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
     const startDay = firstDayOfMonth.getDay();
     const daysInMonth = lastDayOfMonth.getDate();
     
     const days = [];
-    // Spazi vuoti per i giorni precedenti al primo del mese
+    // Empty spaces for days before the first of the month
     for (let i = 0; i < startDay; i++) {
       days.push(<div key={`empty-${i}`} className="p-2"></div>);
     }
     
-    // Giorni del mese
+    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const _isToday = isToday(date);
@@ -166,8 +153,8 @@ const handleToggleComplete = async (activityId) => {
       const hasDayActivities = hasActivities(date);
       
       days.push(
-        <div 
-          key={day} 
+        <div
+          key={day}
           className={`p-2 text-center cursor-pointer relative ${
             _isToday ? 'font-bold' : ''
           } ${
@@ -179,7 +166,6 @@ const handleToggleComplete = async (activityId) => {
           }}
         >
           {day}
-          
           {/* Activity indicators */}
           {hasDayActivities && !isSelected && (
             <div className="absolute bottom-1 left-0 right-0 flex justify-center space-x-1">
@@ -192,8 +178,8 @@ const handleToggleComplete = async (activityId) => {
     
     return days;
   };
-  
-  // Colori per i tipi di attività
+
+  // Activity type colors
   const activityColors = {
     walk: 'bg-blue-500',
     food: 'bg-orange-500',
@@ -204,19 +190,32 @@ const handleToggleComplete = async (activityId) => {
     groom: 'bg-yellow-500',
     training: 'bg-pink-500'
   };
-  
+
+  // Activity icons
+  const activityIcons = {
+    walk: '🚶',
+    food: '🍖',
+    vet: '💉',
+    play: '🎾',
+    water: '💧',
+    medicine: '💊',
+    groom: '✂️',
+    training: '🏋️'
+  };
+
+  // The rest of the JSX remains largely the same
   return (
     <>
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Calendar</h1>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={goToToday}
             className="px-3 py-1 bg-primary text-white rounded-lg text-sm"
           >
             Today
           </button>
-          <button 
+          <button
             onClick={() => setFiltersVisible(!filtersVisible)}
             className={`p-2 rounded-full ${filtersVisible ? 'bg-primary text-white' : 'bg-gray-100'}`}
           >
@@ -225,17 +224,18 @@ const handleToggleComplete = async (activityId) => {
         </div>
       </div>
       
-      {/* Filters Section (collapsible) */}
+      {/* Filters Section */}
       {filtersVisible && (
-        <ActivityFilters 
-          filters={filters} 
-          setFilters={setFilters} 
+        <ActivityFilters
+          filters={filters}
+          setFilters={setFilters}
         />
       )}
       
+      {/* Calendar */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-4">
-          <button 
+          <button
             onClick={prevMonth}
             className="p-2 hover:bg-gray-100 rounded-full"
           >
@@ -244,7 +244,7 @@ const handleToggleComplete = async (activityId) => {
           <h2 className="text-xl font-bold">
             {format(currentMonth, 'MMMM yyyy')}
           </h2>
-          <button 
+          <button
             onClick={nextMonth}
             className="p-2 hover:bg-gray-100 rounded-full"
           >
@@ -253,7 +253,7 @@ const handleToggleComplete = async (activityId) => {
         </div>
         
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {weekdays.map(day => (
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="text-center font-medium text-gray-500 text-sm">
               {day}
             </div>
@@ -265,12 +265,13 @@ const handleToggleComplete = async (activityId) => {
         </div>
       </div>
       
+      {/* Activities List */}
       <div className="mt-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">
             Activities for {format(selectedDate, 'MMMM d, yyyy')}
           </h3>
-          <button 
+          <button
             className="p-2 bg-primary text-white rounded-full"
             onClick={() => navigate('/add')}
           >
@@ -278,23 +279,20 @@ const handleToggleComplete = async (activityId) => {
           </button>
         </div>
         
-        {filteredActivities.length > 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-4 flex justify-center py-8">
+            <div className="w-8 h-8 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
+          </div>
+        ) : filteredActivities.length > 0 ? (
           <div className="space-y-3">
             {filteredActivities.map(activity => (
-              <div 
-                key={activity.id} 
+              <div
+                key={activity.id}
                 className="bg-white rounded-lg shadow p-4 flex items-center"
                 onClick={() => navigate(`/activity/edit/${activity.id}`)}
               >
                 <div className={`w-10 h-10 rounded-full ${activityColors[activity.type] || 'bg-gray-300'} flex items-center justify-center text-white mr-3`}>
-                  {activity.type === 'walk' && '🚶'}
-                  {activity.type === 'food' && '🍖'}
-                  {activity.type === 'vet' && '💉'}
-                  {activity.type === 'play' && '🎾'}
-                  {activity.type === 'water' && '💧'}
-                  {activity.type === 'medicine' && '💊'}
-                  {activity.type === 'groom' && '✂️'}
-                  {activity.type === 'training' && '🏋️'}
+                  {activityIcons[activity.type] || '?'}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium">{activity.title}</h4>
@@ -304,14 +302,14 @@ const handleToggleComplete = async (activityId) => {
                 </div>
                 <div className="w-6 h-6" onClick={(e) => e.stopPropagation()}>
                   {activity.completed ? (
-                    <div 
+                    <div
                       className="w-6 h-6 bg-success rounded-full flex items-center justify-center text-white"
                       onClick={() => handleToggleComplete(activity.id)}
                     >
                       ✓
                     </div>
                   ) : (
-                    <div 
+                    <div
                       className="w-6 h-6 border-2 border-gray-300 rounded-full"
                       onClick={() => handleToggleComplete(activity.id)}
                     ></div>
@@ -325,7 +323,7 @@ const handleToggleComplete = async (activityId) => {
             {filters.type !== 'all' || filters.status !== 'all' ? (
               <>
                 <p>No activities match the selected filters</p>
-                <button 
+                <button
                   className="mt-2 text-primary"
                   onClick={() => setFilters({type: 'all', status: 'all', sort: 'time-asc'})}
                 >
@@ -335,7 +333,7 @@ const handleToggleComplete = async (activityId) => {
             ) : (
               <>
                 <p>No activities scheduled for this day</p>
-                <button 
+                <button
                   className="w-full mt-4 bg-primary text-white rounded-lg py-2 flex items-center justify-center"
                   onClick={() => navigate('/add')}
                 >

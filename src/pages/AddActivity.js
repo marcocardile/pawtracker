@@ -1,10 +1,16 @@
 // src/pages/AddActivity.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDogs, addActivity } from '../services/firebaseService';
 
 function AddActivity() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [dogs, setDogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const [form, setForm] = useState({
     title: '',
     type: 'walk',
@@ -12,10 +18,38 @@ function AddActivity() {
     time: '12:00',
     notes: '',
     priority: 'normal',
-    notification: true
+    notification: true,
+    dogId: '' // This will hold the selected dog's ID
   });
-  
-  // Array di tipi di attività
+
+  // Fetch user's dogs from Firebase
+  useEffect(() => {
+    async function loadDogs() {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const dogsData = await fetchDogs(currentUser.uid);
+        setDogs(dogsData);
+        
+        // Set the default dog if there are any
+        if (dogsData.length > 0) {
+          setForm(prev => ({
+            ...prev,
+            dogId: dogsData[0].id
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading dogs:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadDogs();
+  }, [currentUser]);
+
+  // Array of activity types
   const activityTypes = [
     { id: 'walk', label: 'Walk', icon: '🚶' },
     { id: 'food', label: 'Food', icon: '🍖' },
@@ -26,8 +60,8 @@ function AddActivity() {
     { id: 'groom', label: 'Grooming', icon: '✂️' },
     { id: 'training', label: 'Training', icon: '🏋️' }
   ];
-  
-  // Gestisce il cambiamento dei campi del form
+
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -35,31 +69,48 @@ function AddActivity() {
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-  
-  // Gestisce il cambiamento del tipo di attività
+
+  // Handle activity type selection
   const handleTypeChange = (typeId) => {
     setForm(prev => ({
       ...prev,
       type: typeId
     }));
   };
-  
-  // Gestisce l'invio del form
-  const handleSubmit = (e) => {
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // In una versione reale qui salveresti l'attività nel database
-    console.log('Activity to save:', form);
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
     
-    // Per ora torniamo semplicemente alla pagina calendario
-    // In un'app reale, aggiungeremmo l'attività al calendario prima di tornare
-    navigate('/calendar');
+    try {
+      // Prepare the activity data
+      const activityData = {
+        ...form,
+        userId: currentUser.uid,
+        completed: false
+      };
+      
+      // Add the activity to Firebase
+      await addActivity(activityData);
+      
+      // Navigate back to calendar
+      navigate('/calendar');
+    } catch (error) {
+      console.error("Error saving activity:", error);
+      // You could add error handling here (e.g., show an error message)
+    }
   };
-  
+
+  // JSX remains mostly the same, but add dog selection dropdown
   return (
     <>
       <div className="mb-4 flex items-center">
-        <button 
+        <button
           onClick={() => navigate('/calendar')}
           className="mr-4 p-2 hover:bg-gray-100 rounded-full"
         >
@@ -68,146 +119,184 @@ function AddActivity() {
         <h1 className="text-2xl font-bold">Add Activity</h1>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Titolo */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Title
-          </label>
-          <input
-            type="text"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-            placeholder="What activity are you planning?"
-            required
-          />
+      {loading ? (
+        <div className="flex justify-center p-12">
+          <div className="w-8 h-8 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
         </div>
-        
-        {/* Tipo di attività */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Activity Type
-          </label>
-          <div className="grid grid-cols-4 gap-3">
-            {activityTypes.map(type => (
-              <button
-                key={type.id}
-                type="button"
-                className={`flex flex-col items-center p-3 rounded-lg ${
-                  form.type === type.id 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-                onClick={() => handleTypeChange(type.id)}
-              >
-                <span className="text-2xl mb-1">{type.icon}</span>
-                <span className="text-xs">{type.label}</span>
-              </button>
-            ))}
-          </div>
+      ) : dogs.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-6 text-center">
+          <div className="text-4xl mb-4">🐕</div>
+          <h2 className="text-xl font-bold mb-2">No dogs yet</h2>
+          <p className="text-gray-600 mb-4">Add a dog first to start tracking activities</p>
+          <button
+            onClick={() => navigate('/dogs/new')}
+            className="bg-primary text-white py-2 px-4 rounded-lg"
+          >
+            Add Your First Dog
+          </button>
         </div>
-        
-        {/* Data e ora */}
-        <div className="bg-white rounded-lg shadow p-4 grid grid-cols-2 gap-4">
-          <div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Dog Selection */}
+          <div className="bg-white rounded-lg shadow p-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date
-            </label>
-            <input
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Time
-            </label>
-            <input
-              type="time"
-              name="time"
-              value={form.time}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-              required
-            />
-          </div>
-        </div>
-        
-        {/* Note */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notes (optional)
-          </label>
-          <textarea
-            name="notes"
-            value={form.notes}
-            onChange={handleChange}
-            rows="3"
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-            placeholder="Add any additional details..."
-          />
-        </div>
-        
-        {/* Opzioni */}
-        <div className="bg-white rounded-lg shadow p-4 space-y-4">
-          <h3 className="font-medium">Options</h3>
-          
-          {/* Priorità */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Priority
+              Dog
             </label>
             <select
-              name="priority"
-              value={form.priority}
+              name="dogId"
+              value={form.dogId}
               onChange={handleChange}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              required
             >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
+              {dogs.map(dog => (
+                <option key={dog.id} value={dog.id}>
+                  {dog.name}
+                </option>
+              ))}
             </select>
           </div>
-          
-          {/* Notifica */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="notification"
-              name="notification"
-              checked={form.notification}
-              onChange={handleChange}
-              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-            />
-            <label htmlFor="notification" className="ml-2 block text-sm text-gray-700">
-              Send notification reminder
+
+          {/* Title */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Title
             </label>
+            <input
+              type="text"
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              placeholder="What activity are you planning?"
+              required
+            />
           </div>
-        </div>
-        
-        {/* Pulsanti */}
-        <div className="flex space-x-3">
-          <button
-            type="button"
-            onClick={() => navigate('/calendar')}
-            className="flex-1 py-3 border border-gray-300 rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 py-3 bg-primary text-white rounded-lg font-medium"
-          >
-            Save Activity
-          </button>
-        </div>
-      </form>
+          
+          {/* Activity Type */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Activity Type
+            </label>
+            <div className="grid grid-cols-4 gap-3">
+              {activityTypes.map(type => (
+                <button
+                  key={type.id}
+                  type="button"
+                  className={`flex flex-col items-center p-3 rounded-lg ${
+                    form.type === type.id 
+                      ? 'bg-primary text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  onClick={() => handleTypeChange(type.id)}
+                >
+                  <span className="text-2xl mb-1">{type.icon}</span>
+                  <span className="text-xs">{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Date and Time */}
+          <div className="bg-white rounded-lg shadow p-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                name="time"
+                value={form.time}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                required
+              />
+            </div>
+          </div>
+          
+          {/* Notes */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes (optional)
+            </label>
+            <textarea
+              name="notes"
+              value={form.notes}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              placeholder="Add any additional details..."
+            />
+          </div>
+          
+          {/* Options */}
+          <div className="bg-white rounded-lg shadow p-4 space-y-4">
+            <h3 className="font-medium">Options</h3>
+            
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Priority
+              </label>
+              <select
+                name="priority"
+                value={form.priority}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              >
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            
+            {/* Notification */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="notification"
+                name="notification"
+                checked={form.notification}
+                onChange={handleChange}
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+              />
+              <label htmlFor="notification" className="ml-2 block text-sm text-gray-700">
+                Send notification reminder
+              </label>
+            </div>
+          </div>
+          
+          {/* Buttons */}
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => navigate('/calendar')}
+              className="flex-1 py-3 border border-gray-300 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-primary text-white rounded-lg font-medium"
+            >
+              Save Activity
+            </button>
+          </div>
+        </form>
+      )}
     </>
   );
 }

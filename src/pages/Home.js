@@ -1,107 +1,79 @@
 // src/pages/Home.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, isToday, isPast, parseISO } from 'date-fns';
-
-// Dati fittizi
-const MOCK_DOGS = [
-  {
-    id: '1',
-    name: 'Max',
-    breed: 'Golden Retriever',
-    birthdate: '2020-03-15',
-    gender: 'male',
-    weight: 28,
-    photo: null
-  }
-];
-
-const MOCK_ACTIVITIES = [
-  { 
-    id: 1, 
-    dogId: '1',
-    date: '2023-11-15', 
-    time: '08:30',
-    type: 'walk', 
-    title: 'Morning Walk', 
-    completed: true 
-  },
-  { 
-    id: 2, 
-    dogId: '1',
-    date: '2023-11-15', 
-    time: '12:00',
-    type: 'food', 
-    title: 'Lunch', 
-    completed: true 
-  },
-  { 
-    id: 3, 
-    dogId: '1',
-    date: '2023-11-16', 
-    time: '15:00',
-    type: 'vet', 
-    title: 'Vaccination', 
-    completed: false 
-  },
-  { 
-    id: 4, 
-    dogId: '1',
-    date: '2023-11-20', 
-    time: '13:00',
-    type: 'play', 
-    title: 'Park Visit', 
-    completed: false 
-  },
-  { 
-    id: 5, 
-    dogId: '1',
-    date: '2023-11-25', 
-    time: '17:30',
-    type: 'walk', 
-    title: 'Evening Walk', 
-    completed: false 
-  }
-];
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDogs, fetchActivities } from '../services/firebaseService';
 
 function Home() {
   const navigate = useNavigate();
-  const [dog] = useState(MOCK_DOGS[0]); // Assume first dog is active
-  const [activities] = useState(MOCK_ACTIVITIES);
-  
-  // Attività di oggi
-  const todayActivities = activities.filter(activity => 
+  const { currentUser } = useAuth();
+  const [dog, setDog] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user's dogs and activities from Firebase
+  useEffect(() => {
+    async function loadData() {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get all dogs owned by the user
+        const dogsData = await fetchDogs(currentUser.uid);
+        
+        // Set the first dog as active if available
+        if (dogsData.length > 0) {
+          setDog(dogsData[0]);
+        }
+        
+        // Get all activities
+        const activitiesData = await fetchActivities(currentUser.uid);
+        setActivities(activitiesData);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, [currentUser]);
+
+  // Today's activities
+  const todayActivities = activities.filter(activity =>
     isToday(parseISO(activity.date))
   );
-  
-  // Prossime attività (future, non completate)
+
+  // Upcoming activities (future or today's incomplete)
   const upcomingActivities = activities
-    .filter(activity => 
-      !isPast(parseISO(`${activity.date}T${activity.time}`)) || 
+    .filter(activity =>
+      !isPast(parseISO(`${activity.date}T${activity.time}`)) ||
       (isToday(parseISO(activity.date)) && !activity.completed)
     )
-    .sort((a, b) => 
+    .sort((a, b) =>
       new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`)
     )
-    .slice(0, 3); // Mostra solo le prime 3
-  
-  // Attività completate recentemente
+    .slice(0, 3); // Show only the first 3
+
+  // Recently completed activities
   const recentActivities = activities
     .filter(activity => activity.completed)
-    .sort((a, b) => 
+    .sort((a, b) =>
       new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`)
     )
-    .slice(0, 3); // Mostra solo le ultime 3
-  
-  // Calcola statistiche
+    .slice(0, 3); // Show only the latest 3
+
+  // Calculate statistics
   const stats = {
     todayTotal: todayActivities.length,
     todayCompleted: todayActivities.filter(a => a.completed).length,
     upcomingTotal: upcomingActivities.length,
     totalCompleted: activities.filter(a => a.completed).length
   };
-  
-  // Colori per i tipi di attività
+
+  // Colors for activity types
   const activityColors = {
     walk: 'bg-blue-500',
     food: 'bg-orange-500',
@@ -111,8 +83,8 @@ function Home() {
     groom: 'bg-yellow-500',
     training: 'bg-pink-500'
   };
-  
-  // Icone per i tipi di attività
+
+  // Icons for activity types
   const activityIcons = {
     walk: '🚶',
     food: '🍖',
@@ -122,8 +94,8 @@ function Home() {
     groom: '✂️',
     training: '🏋️'
   };
-  
-  // Calcola l'età del cane
+
+  // Calculate dog's age
   const calculateAge = (birthdate) => {
     if (!birthdate) return '';
     
@@ -139,7 +111,15 @@ function Home() {
     
     return `${diffYears} ${diffYears === 1 ? 'year' : 'years'}`;
   };
-  
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-12">
+        <div className="w-8 h-8 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mb-6">
@@ -149,7 +129,7 @@ function Home() {
       
       {/* Dog profile preview */}
       {dog ? (
-        <div 
+        <div
           className="bg-white rounded-lg shadow p-4 mb-6 flex items-center"
           onClick={() => navigate(`/dogs/${dog.id}`)}
         >
@@ -167,7 +147,7 @@ function Home() {
           </div>
         </div>
       ) : (
-        <div 
+        <div
           className="bg-white rounded-lg shadow p-6 mb-6 text-center"
           onClick={() => navigate('/dogs/new')}
         >
@@ -191,10 +171,10 @@ function Home() {
             <span className="text-gray-500 text-sm mb-1">completed</span>
           </div>
           <div className="mt-2 w-full bg-gray-200 rounded-full h-2.5">
-            <div 
-              className="bg-primary h-2.5 rounded-full" 
-              style={{ 
-                width: `${stats.todayTotal > 0 ? (stats.todayCompleted / stats.todayTotal) * 100 : 0}%` 
+            <div
+              className="bg-primary h-2.5 rounded-full"
+              style={{
+                width: `${stats.todayTotal > 0 ? (stats.todayCompleted / stats.todayTotal) * 100 : 0}%`
               }}
             ></div>
           </div>
@@ -208,7 +188,7 @@ function Home() {
           </div>
           <div className="flex space-x-1 mt-2">
             {upcomingActivities.slice(0, 4).map((activity, idx) => (
-              <div 
+              <div
                 key={idx}
                 className={`h-2.5 rounded-full flex-1 ${activityColors[activity.type] || 'bg-gray-300'}`}
               ></div>
@@ -223,28 +203,28 @@ function Home() {
       {/* Quick action buttons */}
       <h2 className="font-bold text-lg mb-3">Quick Actions</h2>
       <div className="grid grid-cols-4 gap-2 mb-6">
-        <button 
+        <button
           className="flex flex-col items-center bg-white rounded-lg shadow p-3"
           onClick={() => navigate('/add')}
         >
           <div className="text-2xl mb-1">🚶</div>
           <span className="text-xs">Walk</span>
         </button>
-        <button 
+        <button
           className="flex flex-col items-center bg-white rounded-lg shadow p-3"
           onClick={() => navigate('/add')}
         >
           <div className="text-2xl mb-1">🍖</div>
-          <span className="text-xs">Food</span>
+          <span className="text-xs">Feed</span>
         </button>
-        <button 
+        <button
           className="flex flex-col items-center bg-white rounded-lg shadow p-3"
           onClick={() => navigate('/add')}
         >
           <div className="text-2xl mb-1">🎾</div>
           <span className="text-xs">Play</span>
         </button>
-        <button 
+        <button
           className="flex flex-col items-center bg-white rounded-lg shadow p-3"
           onClick={() => navigate('/calendar')}
         >
@@ -257,7 +237,7 @@ function Home() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-lg">Upcoming</h2>
-          <button 
+          <button
             className="text-primary text-sm"
             onClick={() => navigate('/calendar')}
           >
@@ -275,8 +255,8 @@ function Home() {
                 <div className="flex-1">
                   <h3 className="font-medium">{activity.title}</h3>
                   <p className="text-sm text-gray-500">
-                    {isToday(parseISO(activity.date)) 
-                      ? `Today at ${activity.time}` 
+                    {isToday(parseISO(activity.date))
+                      ? `Today at ${activity.time}`
                       : format(parseISO(activity.date), 'MMM d')} at {activity.time}
                   </p>
                 </div>
@@ -295,7 +275,7 @@ function Home() {
         ) : (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
             <p>No upcoming activities</p>
-            <button 
+            <button
               className="mt-2 text-primary"
               onClick={() => navigate('/add')}
             >
@@ -309,7 +289,7 @@ function Home() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-lg">Recent Activities</h2>
-          <button 
+          <button
             className="text-primary text-sm"
             onClick={() => navigate('/calendar')}
           >
@@ -327,8 +307,8 @@ function Home() {
                 <div className="flex-1">
                   <h3 className="font-medium">{activity.title}</h3>
                   <p className="text-sm text-gray-500">
-                    {isToday(parseISO(activity.date)) 
-                      ? `Today at ${activity.time}` 
+                    {isToday(parseISO(activity.date))
+                      ? `Today at ${activity.time}`
                       : format(parseISO(activity.date), 'MMM d')} at {activity.time}
                   </p>
                 </div>

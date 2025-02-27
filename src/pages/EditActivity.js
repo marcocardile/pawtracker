@@ -2,14 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-
-// Mock data solo per la demo
-import { MOCK_ACTIVITIES } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDogs, updateActivity, deleteActivity } from '../services/firebaseService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 function EditActivity() {
   const { activityId } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [dogs, setDogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Form state
   const [form, setForm] = useState({
@@ -20,32 +24,55 @@ function EditActivity() {
     notes: '',
     priority: 'normal',
     notification: true,
-    completed: false
+    completed: false,
+    dogId: ''
   });
-  
-  // Find activity data
+
+  // Fetch user's dogs and the activity data
   useEffect(() => {
-    // In a real app, this would be an API call
-    const activity = MOCK_ACTIVITIES.find(a => a.id.toString() === activityId);
-    
-    if (activity) {
-      setForm({
-        title: activity.title,
-        type: activity.type,
-        date: activity.date,
-        time: activity.time,
-        notes: activity.notes || '',
-        priority: activity.priority || 'normal',
-        notification: activity.notification !== false,
-        completed: activity.completed || false
-      });
-    } else {
-      // Activity not found, go back to calendar
-      navigate('/calendar');
+    async function loadData() {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get all dogs owned by the user
+        const dogsData = await fetchDogs(currentUser.uid);
+        setDogs(dogsData);
+        
+        // Get the selected activity from Firestore
+        const docRef = doc(db, "activities", activityId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const activityData = docSnap.data();
+          setForm({
+            title: activityData.title,
+            type: activityData.type,
+            date: activityData.date,
+            time: activityData.time,
+            notes: activityData.notes || '',
+            priority: activityData.priority || 'normal',
+            notification: activityData.notification !== false,
+            completed: activityData.completed || false,
+            dogId: activityData.dogId
+          });
+        } else {
+          // Activity not found
+          navigate('/calendar');
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        navigate('/calendar');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [activityId, navigate]);
-  
-  // Array di tipi di attività
+    
+    loadData();
+  }, [currentUser, activityId, navigate]);
+
+  // Array of activity types
   const activityTypes = [
     { id: 'walk', label: 'Walk', icon: '🚶' },
     { id: 'food', label: 'Food', icon: '🍖' },
@@ -56,8 +83,8 @@ function EditActivity() {
     { id: 'groom', label: 'Grooming', icon: '✂️' },
     { id: 'training', label: 'Training', icon: '🏋️' }
   ];
-  
-  // Gestisce il cambiamento dei campi del form
+
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -65,50 +92,65 @@ function EditActivity() {
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-  
-  // Gestisce il cambiamento del tipo di attività
+
+  // Handle activity type selection
   const handleTypeChange = (typeId) => {
     setForm(prev => ({
       ...prev,
       type: typeId
     }));
   };
-  
-  // Gestisce il toggle di completamento
+
+  // Toggle completion status
   const toggleComplete = () => {
     setForm(prev => ({
       ...prev,
       completed: !prev.completed
     }));
   };
-  
-  // Gestisce l'eliminazione dell'attività
-  const handleDelete = () => {
-    // In a real app, this would be an API call
-    console.log('Deleting activity:', activityId);
-    // Redirect to calendar after deletion
-    navigate('/calendar');
+
+  // Handle activity deletion
+  const handleDelete = async () => {
+    try {
+      await deleteActivity(activityId);
+      navigate('/calendar');
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+    }
   };
-  
-  // Gestisce l'invio del form
-  const handleSubmit = (e) => {
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // In a real app, this would be an API call
-    console.log('Updated activity:', {
-      id: activityId,
-      ...form
-    });
-    
-    // Redirect to calendar after update
-    navigate('/calendar');
+    try {
+      // Update the activity in Firebase
+      await updateActivity(activityId, {
+        ...form,
+        userId: currentUser.uid
+      });
+      
+      // Navigate back to calendar
+      navigate('/calendar');
+    } catch (error) {
+      console.error("Error updating activity:", error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-12">
+        <div className="w-8 h-8 border-4 border-t-primary border-r-primary/30 border-b-primary/10 border-l-primary/50 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   
+  // JSX is similar to AddActivity with a few additions
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
-          <button 
+          <button
             onClick={() => navigate('/calendar')}
             className="mr-4 p-2 hover:bg-gray-100 rounded-full"
           >
@@ -125,6 +167,26 @@ function EditActivity() {
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Dog Selection */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Dog
+          </label>
+          <select
+            name="dogId"
+            value={form.dogId}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+            required
+          >
+            {dogs.map(dog => (
+              <option key={dog.id} value={dog.id}>
+                {dog.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        
         {/* Title */}
         <div className="bg-white rounded-lg shadow p-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -141,6 +203,7 @@ function EditActivity() {
           />
         </div>
         
+        {/* Status */}
         {/* Status */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
