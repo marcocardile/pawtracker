@@ -70,7 +70,7 @@ function Login() {
         </form>
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account? <Link to="/register" className="text-primary font-medium">Sign Up</Link>
+            Don't have an account? <Link to="/signup" className="text-primary font-medium">Sign Up</Link>
           </p>
         </div>
       </div>
