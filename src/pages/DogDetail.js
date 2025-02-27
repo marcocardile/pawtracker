@@ -2,8 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchActivities, deleteDog } from '../services/firebaseService';
+import { fetchVaccines } from '../services/firebaseService';
 
-// Dati fittizi per i cani
+/* Dati fittizi per i cani
 const MOCK_DOGS = [
   {
     id: '1',
@@ -57,57 +62,78 @@ const MOCK_VACCINES = [
     expiryDate: '2024-08-05',
     notes: 'Annual vaccination'
   }
-];
+];*/
 
 function DogDetail() {
   const { dogId } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('info');
   const [dog, setDog] = useState(null);
-  const [vaccines, setVaccines] = useState([]);
+  const [dogActivities, setDogActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [vaccines, setVaccines] = useState([]);
+
   
-  // Carica i dati del cane
-  useEffect(() => {
-    // Simulazione di caricamento dati
-    setTimeout(() => {
-      const foundDog = MOCK_DOGS.find(d => d.id === dogId);
-      const dogVaccines = MOCK_VACCINES.filter(v => v.dogId === dogId);
+// Carica i dati del cane
+useEffect(() => {
+  const fetchDogData = async () => {
+    if (!currentUser) return;
+    
+    setLoading(true);
+    try {
+      // Carica i dati del cane
+      const dogDoc = await getDoc(doc(db, "dogs", dogId));
       
-      if (foundDog) {
-        setDog(foundDog);
-        setVaccines(dogVaccines);
+      if (dogDoc.exists()) {
+        setDog({ id: dogDoc.id, ...dogDoc.data() });
+        
+        // Carica le attività del cane
+        const activities = await fetchActivities(currentUser.uid);
+        setDogActivities(activities.filter(a => a.dogId === dogId));
+        
+        // Carica le vaccinazioni
+        try {
+          const fetchedVaccines = await fetchVaccines(dogId);
+          setVaccines(fetchedVaccines);
+        } catch (error) {
+          console.error("Error loading vaccines:", error);
+        }
       }
-      
-      setLoading(false);
-    }, 500);
-  }, [dogId]);
+    } catch (error) {
+      console.error("Error loading dog:", error);
+    }
+    setLoading(false);
+  };
+  
+  fetchDogData();
+}, [dogId, currentUser]);
   
   // Calcola l'età in anni e mesi
-  const calculateAge = (birthdate) => {
+  function calculateAge(birthdate) {
     if (!birthdate) return '';
-    
+
     const birth = new Date(birthdate);
     const now = new Date();
-    
+
     let years = now.getFullYear() - birth.getFullYear();
     let months = now.getMonth() - birth.getMonth();
-    
+
     if (months < 0) {
       years--;
       months += 12;
     }
-    
+
     if (years === 0) {
       return `${months} ${months === 1 ? 'month' : 'months'}`;
     }
-    
+
     if (months === 0) {
       return `${years} ${years === 1 ? 'year' : 'years'}`;
     }
-    
+
     return `${years} ${years === 1 ? 'year' : 'years'} and ${months} ${months === 1 ? 'month' : 'months'}`;
-  };
+  }
   
   // Calcola giorni rimanenti alla scadenza
   const daysUntilExpiry = (expiryDate) => {

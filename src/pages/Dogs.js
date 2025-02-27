@@ -1,8 +1,10 @@
 // src/pages/Dogs.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDogs } from '../services/firebaseService';
 
-// Dati fittizi per i cani
+/* Dati fittizi per i cani
 const MOCK_DOGS = [
   {
     id: '1',
@@ -20,11 +22,30 @@ const MOCK_DOGS = [
     weight: 12,
     photo: null
   }
-];
+];*/
 
 function Dogs() {
-  const [dogs] = useState(MOCK_DOGS);
+  const [dogs, setDogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const loadDogs = async () => {
+      if (currentUser) {
+        setLoading(true);
+        try {
+          const fetchedDogs = await fetchDogs(currentUser.uid);
+          setDogs(fetchedDogs);
+        } catch (error) {
+          console.error("Error fetching dogs:", error);
+        }
+        setLoading(false);
+      }
+    };
+    
+    loadDogs();
+  }, [currentUser]);
   
   // Funzione per calcolare l'età in base alla data di nascita
   const calculateAge = (birthdate) => {

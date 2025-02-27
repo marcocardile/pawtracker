@@ -235,7 +235,7 @@ function Home() {
           onClick={() => navigate('/add')}
         >
           <div className="text-2xl mb-1">🍖</div>
-          <span className="text-xs">Feed</span>
+          <span className="text-xs">Food</span>
         </button>
         <button 
           className="flex flex-col items-center bg-white rounded-lg shadow p-3"

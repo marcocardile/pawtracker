@@ -1,9 +1,12 @@
 // src/pages/AddDog.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { addDog } from '../services/firebaseService';
 
 function AddDog() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [form, setForm] = useState({
     name: '',
     breed: '',
@@ -25,15 +28,31 @@ function AddDog() {
   };
   
   // Gestisce l'invio del form
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // In una versione reale qui salveresti i dati del cane nel database
-    console.log('Dog to save:', form);
-    
-    // Per ora torniamo semplicemente alla pagina cani
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!currentUser) {
+    navigate('/login');
+    return;
+  }
+  
+  try {
+    // Prepara i dati del cane
+    const dogData = {
+      ...form,
+      userId: currentUser.uid,
+      weight: form.weight === '' ? null : Number(form.weight),
+      height: form.height === '' ? null : Number(form.height)
+    };
+
+    await addDog(dogData);
+      
     navigate('/dogs');
-  };
+  } catch (error) {
+    console.error("Error adding dog:", error);
+    // Gestione errori
+  }
+};
   
   return (
     <>

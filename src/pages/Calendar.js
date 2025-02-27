@@ -3,7 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths, isSameDay, isToday, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import ActivityFilters from '../components/activities/ActivityFilters';
-import { MOCK_ACTIVITIES } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchActivities, updateActivity } from '../services/firebaseService';
+
+// import { MOCK_ACTIVITIES } from '../data/mockData';
 
 /* Dati fittizi per le attività
 const MOCK_ACTIVITIES = [
@@ -14,11 +17,14 @@ const MOCK_ACTIVITIES = [
   { id: 5, date: '2023-11-25', type: 'walk', title: 'Evening Walk', completed: false },
 ];*/
 
+
 function Calendar() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activities, setActivities] = useState(MOCK_ACTIVITIES);
+  // Inizializza come array vuoto
+  const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [filters, setFilters] = useState({
@@ -28,6 +34,21 @@ function Calendar() {
   });
   
   // Applica filtri e ordinamento alle attività
+  useEffect(() => {
+    const loadActivities = async () => {
+      if (currentUser) {
+        try {
+          const fetchedActivities = await fetchActivities(currentUser.uid);
+          setActivities(fetchedActivities);
+        } catch (error) {
+          console.error("Error fetching activities:", error);
+        }
+      }
+    };
+    
+    loadActivities();
+  }, [currentUser]);
+
   useEffect(() => {
     // Filtriamo per data
     let result = activities.filter(activity => 
@@ -73,15 +94,32 @@ function Calendar() {
   }, [selectedDate, activities, filters]);
   
   // Gestisce il toggle di completamento
-  const handleToggleComplete = (activityId) => {
+const handleToggleComplete = async (activityId) => {
+  // Trova l'attività da aggiornare
+  const activity = activities.find(a => a.id === activityId);
+  
+  if (activity) {
+    // Aggiorna lo stato locale per un feedback immediato
     setActivities(
-      activities.map(activity => 
-        activity.id === activityId 
-          ? { ...activity, completed: !activity.completed } 
-          : activity
+      activities.map(a => 
+        a.id === activityId 
+          ? { ...a, completed: !a.completed } 
+          : a
       )
     );
-  };
+    
+    // Aggiorna anche su Firestore
+    try {
+      await updateActivity(activityId, { 
+        ...activity, 
+        completed: !activity.completed 
+      });
+    } catch (error) {
+      console.error("Error updating activity:", error);
+      // Potresti voler ripristinare lo stato locale in caso di errore
+    }
+  }
+};
   
   // Gestori per navigare tra i mesi
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));

@@ -70,3 +70,32 @@ export const updateActivity = async (activityId, activityData) => {
 export const deleteActivity = async (activityId) => {
   await deleteDoc(doc(db, "activities", activityId));
 };
+
+// Vaccines
+export const fetchVaccines = async (dogId) => {
+    const q = query(collection(db, "vaccines"), where("dogId", "==", dogId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  };
+  
+  export const addVaccine = async (vaccineData) => {
+    return await addDoc(collection(db, "vaccines"), {
+      ...vaccineData,
+      createdAt: serverTimestamp()
+    });
+  };
+  
+  export const updateVaccine = async (vaccineId, vaccineData) => {
+    const vaccineRef = doc(db, "vaccines", vaccineId);
+    await updateDoc(vaccineRef, {
+      ...vaccineData,
+      updatedAt: serverTimestamp()
+    });
+  };
+  
+  export const deleteVaccine = async (vaccineId) => {
+    await deleteDoc(doc(db, "vaccines", vaccineId));
+  };
