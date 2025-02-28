@@ -24,11 +24,12 @@ import VaccinationRecords from './pages/VaccinationRecords';
 import Dogs from './pages/Dogs';
 import DogDetail from './pages/DogDetail';
 import AddDog from './pages/AddDog';
+import WeightChart from './pages/WeightChart';
 
 // Contesto di autenticazione
 import { AuthProvider } from './contexts/AuthContext';
 
-function App() {
+const App = () => {
   return (
     <Router>
       <AuthProvider>
@@ -53,12 +54,13 @@ function App() {
             <Route path="/dogs" element={<Dogs />} />
             <Route path="/dogs/:dogId" element={<DogDetail />} />
             <Route path="/dogs/new" element={<AddDog />} />
+            <Route path="/dogs/weightchart" element={<WeightChart />} />
+
           </Routes>
         </Layout>
       </AuthProvider>
     </Router>
   );
 }
-console.log("Firebase connection:", db ? "Established" : "Failed");
 
 export default App;

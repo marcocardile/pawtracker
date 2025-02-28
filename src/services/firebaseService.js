@@ -121,13 +121,12 @@ export const deleteActivity = async (activityId) => {
   await deleteDoc(doc(db, "activities", activityId));
 };
 
-// Vaccinations
-export const fetchVaccines = async (dogId, userId) => {
-  const q = query(
-    collection(db, "vaccinations"), 
-    where("dogId", "==", dogId),
-    where("userId", "==", userId)
-  );
+// src/services/firebaseService.js
+// Aggiungi queste funzioni insieme alle altre esistenti
+
+// Health Records
+export const fetchHealthRecords = async (dogId) => {
+  const q = query(collection(db, "healthRecords"), where("dogId", "==", dogId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({
     id: doc.id,
@@ -135,21 +134,30 @@ export const fetchVaccines = async (dogId, userId) => {
   }));
 };
 
-export const addVaccination = async (vaccinationData) => {
-  return await addDoc(collection(db, "vaccinations"), {
-    ...vaccinationData,
+export const addHealthRecord = async (recordData) => {
+  return await addDoc(collection(db, "healthRecords"), {
+    ...recordData,
     createdAt: serverTimestamp()
   });
 };
 
-export const updateVaccination = async (vaccinationId, vaccinationData) => {
-  const vaccinationRef = doc(db, "vaccinations", vaccinationId);
-  await updateDoc(vaccinationRef, {
-    ...vaccinationData,
+export const updateHealthRecord = async (recordId, recordData) => {
+  const recordRef = doc(db, "healthRecords", recordId);
+  await updateDoc(recordRef, {
+    ...recordData,
     updatedAt: serverTimestamp()
   });
 };
 
-export const deleteVaccination = async (vaccinationId) => {
-  await deleteDoc(doc(db, "vaccinations", vaccinationId));
+export const deleteHealthRecord = async (recordId) => {
+  await deleteDoc(doc(db, "healthRecords", recordId));
+};
+
+export const fetchVaccines = async (dogId) => {
+  const q = query(collection(db, "vaccines"), where("dogId", "==", dogId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 };
