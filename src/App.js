@@ -1,4 +1,5 @@
-// src/App.js
+// Path: src/App.js
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
@@ -21,6 +22,7 @@ import DayView from './pages/DayView';
 import VaccinationRecords from './pages/VaccinationRecords';
 import HealthRecordScanner from './components/health/HealthRecordScanner';
 import { NotificationsProvider } from './contexts/NotificationsContext';
+import ConnectionStatus from './components/ui/ConnectionStatus';
 
 // Pagine per cani
 import Dogs from './pages/Dogs';
@@ -41,6 +43,8 @@ const App = () => {
             {/* Health Record Scanner per i promemoria automatici */}
             <HealthRecordScanner />
             <Layout>
+              {/* Connection status indicator */}
+              <ConnectionStatus />
               <Routes>
                 {/* Rotte principali */}
                 <Route path="/" element={<Home />} />

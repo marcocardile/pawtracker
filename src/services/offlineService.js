@@ -279,63 +279,226 @@ export const initializeSyncListeners = () => {
 };
 
 // Update firebaseService methods to use offline capabilities
-export const enhanceServiceWithOfflineSupport = (service) => {
-    const enhancedService = { ...service };
-
-    enhancedService.addDog = async (dog) => {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || !currentUser.uid) throw new Error('User not authenticated');
-
-        await saveDataLocally('dogs', { ...dog, userId: currentUser.uid });
+export const enhanceServiceWithOfflineSupport = (firebaseService) => {
+  // Enhanced versions of firebaseService methods
+  return {
+    // Fetch dogs with offline support
+    fetchDogs: async (userId) => {
+      try {
         if (isOnline()) {
-            const docRef = await service.addDog(dog);
-            await processSyncQueue(currentUser.uid);
-            return docRef;
+          // If online, get from Firebase and sync to local
+          const dogs = await firebaseService.fetchDogs(userId);
+          for (const dog of dogs) {
+            await saveDataLocally('dogs', dog, false);
+          }
+          return dogs;
         } else {
-            await addToSyncQueue({
-                type: 'add',
-                collection: 'dogs',
-                docId: dog.id,
-                data: dog
-            });
-            return dog;
+          // If offline, get from local database
+          console.log('Fetching dogs from local database...');
+          return await queryLocalData('dogs', 'userId', userId);
         }
-    };
+      } catch (error) {
+        console.error('Error fetching dogs:', error);
+        // Fallback to local data if available
+        return await queryLocalData('dogs', 'userId', userId);
+      }
+    },
 
-    enhancedService.updateDog = async (dog) => {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || !currentUser.uid) throw new Error('User not authenticated');
-
-        await saveDataLocally('dogs', { ...dog, userId: currentUser.uid });
+    // Add dog with offline support
+    addDog: async (dogData) => {
+      try {
         if (isOnline()) {
-            await service.updateDog(dog);
-            await processSyncQueue(currentUser.uid);
+          // If online, add to Firebase and sync to local
+          const docRef = await firebaseService.addDog(dogData);
+          const newDog = { ...dogData, id: docRef.id };
+          await saveDataLocally('dogs', newDog, false);
+          return docRef;
         } else {
-            await addToSyncQueue({
-                type: 'update',
-                collection: 'dogs',
-                docId: dog.id,
-                data: dog
-            });
+          // If offline, save locally with temporary ID and queue for sync
+          const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const newDog = { ...dogData, id: tempId };
+          await saveDataLocally('dogs', newDog);
+          return { id: tempId };
         }
-    };
+      } catch (error) {
+        console.error('Error adding dog:', error);
+        // Save locally as fallback
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newDog = { ...dogData, id: tempId };
+        await saveDataLocally('dogs', newDog);
+        return { id: tempId };
+      }
+    },
 
-    enhancedService.deleteDog = async (dogId) => {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || !currentUser.uid) throw new Error('User not authenticated');
+    // Update dog with offline support
+    updateDog: async (dogId, dogData) => {
+      try {
+        if (isOnline()) {
+          // If online, update Firebase and sync to local
+          await firebaseService.updateDog(dogId, dogData);
+          const updatedDog = { ...dogData, id: dogId };
+          await saveDataLocally('dogs', updatedDog, false);
+        } else {
+          // If offline, update locally and queue for sync
+          const existingDog = await getLocalData('dogs', dogId);
+          if (!existingDog) throw new Error(`Dog with ID ${dogId} not found locally`);
+          
+          const updatedDog = { ...existingDog, ...dogData, id: dogId };
+          await saveDataLocally('dogs', updatedDog);
+        }
+      } catch (error) {
+        console.error('Error updating dog:', error);
+        // Update locally as fallback if dog exists
+        try {
+          const existingDog = await getLocalData('dogs', dogId);
+          if (existingDog) {
+            const updatedDog = { ...existingDog, ...dogData, id: dogId };
+            await saveDataLocally('dogs', updatedDog);
+          }
+        } catch (localError) {
+          console.error('Error updating dog locally:', localError);
+        }
+      }
+    },
 
+    // Delete dog with offline support
+    deleteDog: async (dogId) => {
+      try {
+        if (isOnline()) {
+          // If online, delete from Firebase and local
+          await firebaseService.deleteDog(dogId);
+          await deleteDataLocally('dogs', dogId, false);
+        } else {
+          // If offline, delete locally and queue for sync
+          await deleteDataLocally('dogs', dogId);
+        }
+      } catch (error) {
+        console.error('Error deleting dog:', error);
+        // Delete locally as fallback
         await deleteDataLocally('dogs', dogId);
-        if (isOnline()) {
-            await service.deleteDog(dogId);
-            await processSyncQueue(currentUser.uid);
-        } else {
-            await addToSyncQueue({
-                type: 'delete',
-                collection: 'dogs',
-                docId: dogId
-            });
-        }
-    };
+      }
+    },
 
-    return enhancedService;
+    // Fetch activities with offline support
+    fetchActivities: async (userId) => {
+      try {
+        if (isOnline()) {
+          // If online, get from Firebase and sync to local
+          const activities = await firebaseService.fetchActivities(userId);
+          for (const activity of activities) {
+            await saveDataLocally('activities', activity, false);
+          }
+          return activities;
+        } else {
+          // If offline, get from local database
+          console.log('Fetching activities from local database...');
+          return await queryLocalData('activities', 'userId', userId);
+        }
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        // Fallback to local data if available
+        return await queryLocalData('activities', 'userId', userId);
+      }
+    },
+
+    // Add activity with offline support
+    addActivity: async (activityData) => {
+      try {
+        if (isOnline()) {
+          // If online, add to Firebase and sync to local
+          const docRef = await firebaseService.addActivity(activityData);
+          const newActivity = { ...activityData, id: docRef.id };
+          await saveDataLocally('activities', newActivity, false);
+          return docRef;
+        } else {
+          // If offline, save locally with temporary ID and queue for sync
+          const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const newActivity = { ...activityData, id: tempId };
+          await saveDataLocally('activities', newActivity);
+          return { id: tempId };
+        }
+      } catch (error) {
+        console.error('Error adding activity:', error);
+        // Save locally as fallback
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newActivity = { ...activityData, id: tempId };
+        await saveDataLocally('activities', newActivity);
+        return { id: tempId };
+      }
+    },
+
+    // Update activity with offline support
+    updateActivity: async (activityId, activityData) => {
+      try {
+        if (isOnline()) {
+          // If online, update Firebase and sync to local
+          await firebaseService.updateActivity(activityId, activityData);
+          // Get the existing activity to merge with updates
+          const existingActivity = await getLocalData('activities', activityId) || 
+                                  (await getDoc(doc(db, 'activities', activityId))).data();
+          
+          const updatedActivity = { ...existingActivity, ...activityData, id: activityId };
+          await saveDataLocally('activities', updatedActivity, false);
+        } else {
+          // If offline, update locally and queue for sync
+          const existingActivity = await getLocalData('activities', activityId);
+          if (!existingActivity) throw new Error(`Activity with ID ${activityId} not found locally`);
+          
+          const updatedActivity = { ...existingActivity, ...activityData, id: activityId };
+          await saveDataLocally('activities', updatedActivity);
+        }
+      } catch (error) {
+        console.error('Error updating activity:', error);
+        // Update locally as fallback if activity exists
+        try {
+          const existingActivity = await getLocalData('activities', activityId);
+          if (existingActivity) {
+            const updatedActivity = { ...existingActivity, ...activityData, id: activityId };
+            await saveDataLocally('activities', updatedActivity);
+          }
+        } catch (localError) {
+          console.error('Error updating activity locally:', localError);
+        }
+      }
+    },
+
+    // Delete activity with offline support
+    deleteActivity: async (activityId) => {
+      try {
+        if (isOnline()) {
+          // If online, delete from Firebase and local
+          await firebaseService.deleteActivity(activityId);
+          await deleteDataLocally('activities', activityId, false);
+        } else {
+          // If offline, delete locally and queue for sync
+          await deleteDataLocally('activities', activityId);
+        }
+      } catch (error) {
+        console.error('Error deleting activity:', error);
+        // Delete locally as fallback
+        await deleteDataLocally('activities', activityId);
+      }
+    },
+
+    // Similar patterns for other methods like fetchHealthRecords, addHealthRecord, etc.
+    // ...
+
+    // Sync all data for a user
+    syncAllData: async (userId) => {
+      if (!userId) return false;
+      
+      try {
+        // Process any pending sync operations
+        await processSyncQueue(userId);
+        
+        // Sync down from Firestore
+        await syncFromFirestore(userId);
+        
+        return true;
+      } catch (error) {
+        console.error('Error syncing all data:', error);
+        return false;
+      }
+    }
+  };
 };
