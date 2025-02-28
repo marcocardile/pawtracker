@@ -1,5 +1,5 @@
-// src/services/firebaseService.js
-import { setDoc } from 'firebase/firestore';
+// Path: src/services/firebaseService.js
+
 import { db } from '../firebase';
 import { 
   collection, 
@@ -11,7 +11,8 @@ import {
   deleteDoc, 
   query, 
   where,
-  serverTimestamp 
+  serverTimestamp,
+  setDoc
 } from 'firebase/firestore';
 
 // Users
@@ -43,25 +44,25 @@ export const createUserDocument = async (user, additionalData = {}) => {
     return userRef;
   };
   
-  export const updateUserDocument = async (userId, userData) => {
-    const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, {
-      ...userData,
-      updatedAt: serverTimestamp()
-    });
-  };
-  
-  export const getUserDocument = async (userId) => {
-    const userRef = doc(db, "users", userId);
-    const snapshot = await getDoc(userRef);
-    if (snapshot.exists()) {
-      return {
-        id: snapshot.id,
-        ...snapshot.data()
-      };
-    }
-    return null;
-  };
+export const updateUserDocument = async (userId, userData) => {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    ...userData,
+    updatedAt: serverTimestamp()
+  });
+};
+
+export const getUserDocument = async (userId) => {
+  const userRef = doc(db, "users", userId);
+  const snapshot = await getDoc(userRef);
+  if (snapshot.exists()) {
+    return {
+      id: snapshot.id,
+      ...snapshot.data()
+    };
+  }
+  return null;
+};
 
 // Dogs
 export const fetchDogs = async (userId) => {
@@ -121,9 +122,6 @@ export const deleteActivity = async (activityId) => {
   await deleteDoc(doc(db, "activities", activityId));
 };
 
-// src/services/firebaseService.js
-// Aggiungi queste funzioni insieme alle altre esistenti
-
 // Health Records
 export const fetchHealthRecords = async (dogId) => {
   const q = query(collection(db, "healthRecords"), where("dogId", "==", dogId));
@@ -153,8 +151,9 @@ export const deleteHealthRecord = async (recordId) => {
   await deleteDoc(doc(db, "healthRecords", recordId));
 };
 
+// Vaccines
 export const fetchVaccines = async (dogId) => {
-  const q = query(collection(db, "vaccines"), where("dogId", "==", dogId));
+  const q = query(collection(db, "vaccinations"), where("dogId", "==", dogId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({
     id: doc.id,

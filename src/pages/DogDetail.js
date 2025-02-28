@@ -10,7 +10,8 @@ import {
   fetchVaccines,
   fetchHealthRecords, 
   addHealthRecord, 
-  deleteHealthRecord 
+  deleteHealthRecord,
+  updateDog
 } from '../services/firebaseService';
 
 function DogDetail() {
@@ -97,8 +98,34 @@ function DogDetail() {
             setHealthRecords(records);
             
             // Sort records by type
-            setWeightRecords(records.filter(record => record.type === 'weight')
-              .sort((a, b) => new Date(b.date) - new Date(a.date)));
+            const weightRecs = records.filter(record => record.type === 'weight')
+              .sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            setWeightRecords(weightRecs);
+            
+            // Create initial weight record if none exists and dog has weight property
+            if (weightRecs.length === 0 && dogDoc.exists() && dogDoc.data().weight) {
+              const initialWeight = {
+                type: 'weight',
+                dogId,
+                userId: currentUser.uid,
+                date: format(new Date(dogDoc.data().birthdate || new Date()), 'yyyy-MM-dd'),
+                weight: parseFloat(dogDoc.data().weight),
+                notes: 'Initial weight'
+              };
+              
+              try {
+                const docRef = await addHealthRecord(initialWeight);
+                
+                // Add to local state with the real ID
+                setWeightRecords([{
+                  id: docRef.id,
+                  ...initialWeight
+                }]);
+              } catch (error) {
+                console.error("Error creating initial weight record:", error);
+              }
+            }
               
             setVaccineRecords(records.filter(record => record.type === 'vaccine')
               .sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -179,7 +206,18 @@ function DogDetail() {
         ...weightData
       };
       
+      // Update weight records list
       setWeightRecords([newRecord, ...weightRecords]);
+      
+      // Also update the main dog weight property
+      await updateDog(dogId, { weight: parseFloat(newWeightRecord.weight) });
+      
+      // Update local dog state
+      setDog(prevDog => ({
+        ...prevDog,
+        weight: parseFloat(newWeightRecord.weight)
+      }));
+      
       setShowAddWeightModal(false);
       
       // Reset form
@@ -208,11 +246,11 @@ function DogDetail() {
         notes: newVaccineRecord.notes
       };
       
-      await addHealthRecord(vaccineData);
+      const docRef = await addHealthRecord(vaccineData);
       
       // Add to local state
       const newRecord = {
-        id: Date.now().toString(), // Temporary ID until refresh
+        id: docRef.id,
         ...vaccineData
       };
       
@@ -768,36 +806,37 @@ function DogDetail() {
               <button 
                 className="text-primary text-sm"
                 onClick={() => navigate('/add')}
-      >
-        + Add Activity
-      </button>
-    </div>
-    
-    {dogActivities && dogActivities.length > 0 ? (
-      <div className="space-y-3">
-        {dogActivities.map(activity => (
-          <div key={activity.id} className="bg-white rounded-lg shadow p-3 flex items-center">
-            {/* Activity content */}
-            <div className="flex-1">
-              <h4 className="font-medium">{activity.title}</h4>
-              <p className="text-sm text-gray-500">{activity.type}</p>
+              >
+                + Add Activity
+              </button>
             </div>
+            
+            {dogActivities && dogActivities.length > 0 ? (
+              <div className="space-y-3">
+                {dogActivities.map(activity => (
+                  <div key={activity.id} className="bg-white rounded-lg shadow p-3 flex items-center">
+                    {/* Activity content */}
+                    <div className="flex-1">
+                      <h4 className="font-medium">{activity.title}</h4>
+                      <p className="text-sm text-gray-500">{activity.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4 text-gray-500">
+                <p>No activities recorded for {dog.name} yet</p>
+                <button 
+                  className="mt-2 text-primary"
+                  onClick={() => navigate('/add')}
+                >
+                  Add first activity
+                </button>
+              </div>
+            )}
           </div>
-        ))}
+        )}
       </div>
-    ) : (
-      <div className="text-center p-4 text-gray-500">
-        <p>No activities recorded for {dog.name} yet</p>
-        <button 
-          className="mt-2 text-primary"
-          onClick={() => navigate('/add')}
-        >
-          Add first activity
-        </button>
-      </div>
-    )}
-  </div>
-)}
       
       {/* Add Weight Modal */}
       {showAddWeightModal && (
@@ -856,9 +895,251 @@ function DogDetail() {
         </div>
       )}
       
-        {/* Altri modali simili per vaccini, medicinali e visite veterinarie */}
-        {/* ... */}
-      </div>
+      {/* Add Vaccine Modal */}
+      {showAddVaccineModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Add Vaccination Record</h3>
+            <form onSubmit={handleAddVaccine}>
+              {/* Form fields */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vaccine Name</label>
+                <input
+                  type="text"
+                  value={newVaccineRecord.name}
+                  onChange={(e) => setNewVaccineRecord({...newVaccineRecord, name: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={newVaccineRecord.date}
+                  onChange={(e) => setNewVaccineRecord({...newVaccineRecord, date: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date (optional)</label>
+                <input
+                  type="date"
+                  value={newVaccineRecord.expiryDate}
+                  onChange={(e) => setNewVaccineRecord({...newVaccineRecord, expiryDate: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newVaccineRecord.notes}
+                  onChange={(e) => setNewVaccineRecord({...newVaccineRecord, notes: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  rows="3"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddVaccineModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-white rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Medication Modal */}
+      {showAddMedicationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Add Medication Record</h3>
+            <form onSubmit={handleAddMedication}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
+                <input
+                  type="text"
+                  value={newMedicationRecord.name}
+                  onChange={(e) => setNewMedicationRecord({...newMedicationRecord, name: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={newMedicationRecord.startDate}
+                    onChange={(e) => setNewMedicationRecord({...newMedicationRecord, startDate: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date (optional)</label>
+                  <input
+                    type="date"
+                    value={newMedicationRecord.endDate}
+                    onChange={(e) => setNewMedicationRecord({...newMedicationRecord, endDate: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
+                  <input
+                    type="text"
+                    value={newMedicationRecord.dosage}
+                    onChange={(e) => setNewMedicationRecord({...newMedicationRecord, dosage: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    placeholder="e.g., 10mg"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                  <select
+                    value={newMedicationRecord.frequency}
+                    onChange={(e) => setNewMedicationRecord({...newMedicationRecord, frequency: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="twice-daily">Twice Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="as-needed">As Needed</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newMedicationRecord.notes}
+                  onChange={(e) => setNewMedicationRecord({...newMedicationRecord, notes: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  rows="3"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddMedicationModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-white rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Vet Visit Modal */}
+      {showAddVetModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Add Veterinary Visit</h3>
+            <form onSubmit={handleAddVetAppointment}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Visit</label>
+                <input
+                  type="text"
+                  value={newVetRecord.reason}
+                  onChange={(e) => setNewVetRecord({...newVetRecord, reason: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={newVetRecord.date}
+                    onChange={(e) => setNewVetRecord({...newVetRecord, date: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                  <input
+                    type="time"
+                    value={newVetRecord.time}
+                    onChange={(e) => setNewVetRecord({...newVetRecord, time: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Veterinarian</label>
+                  <input
+                    type="text"
+                    value={newVetRecord.veterinarian}
+                    onChange={(e) => setNewVetRecord({...newVetRecord, veterinarian: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={newVetRecord.location}
+                    onChange={(e) => setNewVetRecord({...newVetRecord, location: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newVetRecord.notes}
+                  onChange={(e) => setNewVetRecord({...newVetRecord, notes: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  rows="3"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddVetModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-white rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
