@@ -40,9 +40,11 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    return signOut(auth);
+    return signOut(auth).then(() => {
+      // Assicurati che currentUser venga impostato a null
+      setCurrentUser(null);
+    });
   }
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);

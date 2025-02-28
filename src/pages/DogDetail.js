@@ -1138,14 +1138,6 @@ function DogDetail() {
               </div>
             </form>
           </div>
-          <div className="mt-4">
-  <button
-    onClick={() => navigate(`/analytics/${dogId}`)}
-    className="w-full bg-primary text-white py-2 px-4 rounded-lg flex items-center justify-center"
-  >
-    <span className="mr-2">📊</span> View Dog Analytics
-  </button>
-</div>
         </div>
       )}
     </>
