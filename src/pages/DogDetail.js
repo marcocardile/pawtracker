@@ -13,6 +13,7 @@ import {
   deleteHealthRecord,
   updateDog
 } from '../services/firebaseService';
+import DogWeightChart from '../components/health/DogWeightChart';
 
 function DogDetail() {
   const { dogId } = useParams();
@@ -548,10 +549,8 @@ function DogDetail() {
                 <div>
                   {/* Weight Chart will go here - for now just a placeholder */}
                   <div className="border rounded-lg p-3 bg-gray-50 mb-3">
-                    <div className="text-center text-gray-500 py-8">
-                      Weight Chart Coming Soon
-                    </div>
-                  </div>
+                  <DogWeightChart weightRecords={weightRecords} />
+                </div>
                   
                   {/* Weight Records Table */}
                   <div className="overflow-hidden rounded-lg border border-gray-200">

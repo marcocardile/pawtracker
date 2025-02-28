@@ -24,7 +24,7 @@ import VaccinationRecords from './pages/VaccinationRecords';
 import Dogs from './pages/Dogs';
 import DogDetail from './pages/DogDetail';
 import AddDog from './pages/AddDog';
-import WeightChart from './pages/WeightChart';
+import DogWeightChart from './components/health/DogWeightChart';
 
 // Contesto di autenticazione
 import { AuthProvider } from './contexts/AuthContext';
@@ -54,7 +54,7 @@ const App = () => {
             <Route path="/dogs" element={<Dogs />} />
             <Route path="/dogs/:dogId" element={<DogDetail />} />
             <Route path="/dogs/new" element={<AddDog />} />
-            <Route path="/dogs/weightchart" element={<WeightChart />} />
+            <Route path="/dogs/dogweightchart" element={<DogWeightChart />} />
 
           </Routes>
         </Layout>
