@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 // Pagine per attività
 import Calendar from './pages/Calendar';
@@ -53,6 +54,7 @@ const App = () => {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/analytics/:dogId?" element={<AnalyticsPage />} />
 
                 {/* Rotte attività */}
                 <Route path="/calendar" element={<Calendar />} />

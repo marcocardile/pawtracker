@@ -448,6 +448,7 @@ function DogDetail() {
         </div>
       </div>
       
+      
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow mb-4">
         <div className="flex border-b">
@@ -1137,6 +1138,14 @@ function DogDetail() {
               </div>
             </form>
           </div>
+          <div className="mt-4">
+  <button
+    onClick={() => navigate(`/analytics/${dogId}`)}
+    className="w-full bg-primary text-white py-2 px-4 rounded-lg flex items-center justify-center"
+  >
+    <span className="mr-2">📊</span> View Dog Analytics
+  </button>
+</div>
         </div>
       )}
     </>
