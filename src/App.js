@@ -16,7 +16,9 @@ import Register from './pages/Register';
 import Calendar from './pages/Calendar';
 import AddActivity from './pages/AddActivity';
 import EditActivity from './pages/EditActivity';
+import CustomActivityTypes from './pages/CustomActivityTypes';
 import DayView from './pages/DayView';
+import VaccinationRecords from './pages/VaccinationRecords';
 
 // Pagine per cani
 import Dogs from './pages/Dogs';
@@ -44,6 +46,8 @@ function App() {
             <Route path="/day/:date" element={<DayView />} />
             <Route path="/add" element={<AddActivity />} />
             <Route path="/activity/edit/:activityId" element={<EditActivity />} />
+            <Route path="/activity-types" element={<CustomActivityTypes />} />
+            <Route path="/dogs/:dogId/vaccinations" element={<VaccinationRecords />} />
 
             {/* Rotte cani */}
             <Route path="/dogs" element={<Dogs />} />

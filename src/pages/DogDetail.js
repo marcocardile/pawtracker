@@ -293,59 +293,74 @@ useEffect(() => {
         
         {/* Health tab */}
         {activeTab === 'health' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium text-gray-500">Vaccinations</h3>
-              <button className="text-primary text-sm">+ Add Vaccine</button>
+  <div className="space-y-4">
+    <div className="flex justify-between items-center">
+      <h3 className="font-medium text-gray-500">Vaccinations</h3>
+      <div className="flex space-x-2">
+        <button 
+          className="text-primary text-sm"
+          onClick={() => navigate(`/dogs/${dogId}/vaccinations/add`)}
+        >
+          + Add Vaccination
+        </button>
+        <button 
+          className="text-primary text-sm"
+          onClick={() => navigate(`/dogs/${dogId}/vaccinations`)}
+        >
+          Manage Vaccinations
+        </button>
+      </div>
+    </div>
+    
+    {vaccines.length > 0 ? (
+      <div className="space-y-3">
+        {vaccines.map(vaccine => {
+          const daysLeft = daysUntilExpiry(vaccine.expiryDate);
+          let statusColor = 'green';
+          if (daysLeft < 0) statusColor = 'red';
+          else if (daysLeft < 30) statusColor = 'yellow';
+          
+          return (
+            <div 
+              key={vaccine.id} 
+              className="border rounded-lg p-3 flex justify-between items-center"
+            >
+              <div>
+                <h4 className="font-medium">{vaccine.name}</h4>
+                <p className="text-sm text-gray-500">{vaccine.notes}</p>
+                <div className="flex space-x-2 mt-1">
+                  <span>Date: {format(new Date(vaccine.date), 'MM/dd/yyyy')}</span>
+                  <span>Expiry: {format(new Date(vaccine.expiryDate), 'MM/dd/yyyy')}</span>
+                </div>
+              </div>
+              <div>
+                <span className={`text-xs bg-${statusColor}-100 text-${statusColor}-800 px-2 py-0.5 rounded-full`}>
+                  {daysLeft < 0 ? 'Expired' : daysLeft < 30 ? `Expires in ${daysLeft} days` : 'Valid'}
+                </span>
+                <button 
+                  className="ml-2 text-xs text-primary"
+                  onClick={() => navigate(`/dogs/${dogId}/vaccinations/edit/${vaccine.id}`)}
+                >
+                  Edit
+                </button>
+              </div>
             </div>
-            
-            {vaccines.length > 0 ? (
-              <div className="space-y-3">
-                {vaccines.map(vaccine => {
-                  const daysLeft = daysUntilExpiry(vaccine.expiryDate);
-                  let statusColor = 'green';
-                  if (daysLeft < 0) statusColor = 'red';
-                  else if (daysLeft < 30) statusColor = 'yellow';
-                  
-                  return (
-                    <div key={vaccine.id} className="border rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{vaccine.name}</h4>
-                          <p className="text-sm text-gray-500">{vaccine.notes}</p>
-                        </div>
-                        <span className={`text-xs bg-${statusColor}-100 text-${statusColor}-800 px-2 py-0.5 rounded-full`}>
-                          {daysLeft < 0 ? 'Expired' : daysLeft < 30 ? `Expires in ${daysLeft} days` : 'Valid'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm mt-2 text-gray-500">
-                        <span>Date: {format(new Date(vaccine.date), 'MMM d, yyyy')}</span>
-                        <span>Expires: {format(new Date(vaccine.expiryDate), 'MMM d, yyyy')}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center p-4 text-gray-500">
-                <p>No vaccinations recorded yet</p>
-                <button className="mt-2 text-primary">Add first vaccination</button>
-              </div>
-            )}
-            
-            <div className="pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium text-gray-500">Weight History</h3>
-                <button className="text-primary text-sm">+ Add Weight</button>
-              </div>
-              <div className="text-center p-4 text-gray-500">
-                <p>No weight records yet</p>
-                <button className="mt-2 text-primary">Add first weight record</button>
-              </div>
-            </div>
-          </div>
-        )}
-        
+          );
+        })}
+      </div>
+    ) : (
+      <div className="text-center p-4 text-gray-500">
+        <p>No vaccinations recorded</p>
+        <button 
+          className="mt-2 bg-primary text-white px-4 py-2 rounded-lg"
+          onClick={() => navigate(`/dogs/${dogId}/vaccinations/add`)}
+        >
+          Add First Vaccination
+        </button>
+      </div>
+    )}
+  </div>
+)}      
         {/* Activities tab */}
         {activeTab === 'activities' && (
           <div className="space-y-4">
