@@ -89,7 +89,7 @@ function DeleteAccount() {
 
   const handleDeleteAccount = async () => {
     if (!currentUser) {
-      navigate('/login');
+      navigate('/signup');
       return;
     }
 
@@ -126,7 +126,7 @@ function DeleteAccount() {
       await logout();
       
       // Reindirizza alla pagina di login
-      navigate('/login');
+      navigate('/signup');
     } catch (err) {
       console.error('Errore durante l\'eliminazione dell\'account:', err);
       setError('Impossibile eliminare l\'account. Riprova più tardi.');
