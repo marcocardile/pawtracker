@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { db } from './firebase';
@@ -41,7 +41,6 @@ function UnauthenticatedRoutes() {
       <Route path="/signup" element={<SignUp />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="*" element={<Navigate to="/signup" />} />
     </Routes>
   );
@@ -49,6 +48,31 @@ function UnauthenticatedRoutes() {
 
 // Componente per rotte autenticate
 function AuthenticatedRoutes() {
+  const { currentUser } = useAuth();
+  
+  // Utilizziamo useState per gestire in modo più sicuro il flag di onboarding
+  const [requiresOnboarding, setRequiresOnboarding] = useState(false);
+  
+  // Controlliamo il flag solo al mount del componente
+  useEffect(() => {
+    const needsOnboarding = localStorage.getItem('requiresOnboarding') === 'true';
+    setRequiresOnboarding(needsOnboarding);
+    
+    if (needsOnboarding) {
+      console.log("Utente richiede onboarding, controllo effettuato");
+    }
+  }, []);
+  
+  // Rendiamo il componente Onboarding separato dal Layout per evitare problemi
+  if (requiresOnboarding) {
+    return (
+      <Routes>
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="*" element={<Navigate to="/onboarding" />} />
+      </Routes>
+    );
+  }
+
   return (
     <Layout>
       <Routes>
@@ -71,6 +95,9 @@ function AuthenticatedRoutes() {
         <Route path="/dogs/:dogId" element={<DogDetail />} />
         <Route path="/dogs/new" element={<AddDog />} />
         <Route path="/dogs/dogweightchart" element={<DogWeightChart />} />
+
+        {/* Accessibile anche dopo aver completato l'onboarding */}
+        <Route path="/onboarding" element={<Onboarding />} />
 
         {/* Reindirizza alla home se rotta non trovata */}
         <Route path="*" element={<Navigate to="/" />} />

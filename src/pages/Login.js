@@ -3,9 +3,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-console.log("useAuth in Login.js:", useAuth);
-
-
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,9 +28,16 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light">
+    <div className="min-h-screen flex items-center justify-center bg-light px-4 sm:px-6 lg:px-8">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full overflow-hidden mb-4">
+            <img 
+              src="/logo192.png" 
+              alt="PawTracker Logo" 
+              className="w-16 h-16 object-contain" 
+            />
+          </div>
           <h1 className="text-2xl font-bold">PawTracker</h1>
           <p className="text-gray-600">Your dog's life, organized</p>
         </div>

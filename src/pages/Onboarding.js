@@ -1,9 +1,9 @@
 // src/pages/Onboarding.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { addDog } from '../services/firebaseService';
-import { format } from 'date-fns';
+import { format, subYears } from 'date-fns';
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -13,53 +13,44 @@ function Onboarding() {
   const [dogData, setDogData] = useState({
     name: '',
     breed: '',
-    birthdate: format(new Date(), 'yyyy-MM-dd'), // Imposta data corrente come default
+    birthdate: format(new Date(), 'yyyy-MM-dd'),
     gender: '',
     weight: '',
     height: '',
     notes: ''
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  // Verifica che l'utente sia autenticato
+  useEffect(() => {
+    if (!currentUser) {
+      // Se l'utente non è autenticato, reindirizza alla pagina di login
+      localStorage.removeItem('requiresOnboarding');
+      navigate('/login');
+    }
+  }, [currentUser, navigate]);
+
+  // Calcola la data minima per il calendario (20 anni fa)
+  const minDate = format(subYears(new Date(), 20), 'yyyy-MM-dd');
+  // Data massima è oggi
+  const maxDate = format(new Date(), 'yyyy-MM-dd');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    let processedValue = value;
-
-    // Validazioni specifiche per campo
-    switch(name) {
-      case 'birthdate':
-        const selectedDate = new Date(value);
-        const today = new Date();
-        
-        if (selectedDate > today) {
-          // Se la data è nel futuro, imposta la data corrente
-          processedValue = format(today, 'yyyy-MM-dd');
-        }
-        break;
-      
-      case 'weight':
-        // Converti in numero e limita a 2 decimali
-        const numericWeight = parseFloat(value);
-        
-        if (!isNaN(numericWeight) && numericWeight >= 0 && numericWeight <= 100) {
-          processedValue = numericWeight.toFixed(1);
-        } else {
-          processedValue = '';
-        }
-        break;
-    }
-
-    setDogData(prev => ({
-      ...prev,
-      [name]: processedValue
-    }));
-
+    
     // Rimuovi eventuali errori per questo campo
     if (errors[name]) {
       const newErrors = {...errors};
       delete newErrors[name];
       setErrors(newErrors);
     }
+
+    // Aggiorna il valore nel dogData
+    setDogData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const validateStep = () => {
@@ -95,6 +86,8 @@ function Onboarding() {
           newErrors.weight = 'Please enter a valid weight between 0 and 100 kg';
         }
         break;
+      default:
+        break;
     }
 
     setErrors(newErrors);
@@ -111,25 +104,43 @@ function Onboarding() {
     setStep(prev => prev - 1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!currentUser) {
+      console.error("No authenticated user");
+      return;
+    }
     
     try {
+      setLoading(true);
+      
       // Validazione finale
       const weight = parseFloat(dogData.weight);
       const height = dogData.height ? parseFloat(dogData.height) : null;
 
+      console.log("Adding dog to database...");
+      // Aggiungi il cane al database
       await addDog({
         ...dogData,
         userId: currentUser.uid,
         weight: weight,
-        ...(height ? { height } : {}) // Aggiungi height solo se è un numero valido
+        ...(height ? { height } : {})
       });
       
-      navigate('/');
+      console.log("Dog added successfully, removing onboarding flag...");
+      // Rimuovi il flag di onboarding
+      localStorage.removeItem('requiresOnboarding');
+      
+      // Pausa breve per assicurarsi che il localStorage sia aggiornato
+      setTimeout(() => {
+        // Reindirizza alla home
+        console.log("Redirecting to home...");
+        window.location.href = '/'; // Usa window.location per un reload completo
+      }, 500);
     } catch (error) {
       console.error('Error saving dog profile:', error);
       alert('Failed to save dog profile. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,8 +169,36 @@ function Onboarding() {
           </div>
         );
       
-      // Gli altri casi di step seguono la stessa logica di validazione
-      // con aggiunti controlli di errore e stili condizionali
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold mb-4">What breed is {dogData.name}?</h2>
+            <input
+              type="text"
+              name="breed"
+              value={dogData.breed}
+              onChange={handleChange}
+              className={`w-full p-3 border ${errors.breed ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+              placeholder="Enter breed"
+              required
+            />
+            {errors.breed && <p className="text-red-500 text-sm">{errors.breed}</p>}
+            <div className="flex space-x-4">
+              <button 
+                onClick={prevStep}
+                className="flex-1 border border-gray-300 py-3 rounded-md"
+              >
+                Back
+              </button>
+              <button 
+                onClick={nextStep}
+                className="flex-1 bg-primary text-white py-3 rounded-md"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
       
       case 3:
         return (
@@ -170,7 +209,8 @@ function Onboarding() {
               name="birthdate"
               value={dogData.birthdate}
               onChange={handleChange}
-              max={format(new Date(), 'yyyy-MM-dd')} // Impedisce date future
+              min={minDate}
+              max={maxDate}
               className={`w-full p-3 border ${errors.birthdate ? 'border-red-500' : 'border-gray-300'} rounded-md`}
               required
             />
@@ -192,22 +232,78 @@ function Onboarding() {
           </div>
         );
       
+      case 4:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold mb-4">What's {dogData.name}'s gender?</h2>
+            <div className="flex space-x-4">
+              <button 
+                type="button"
+                onClick={() => {
+                  setDogData(prev => ({...prev, gender: 'male'}));
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors.gender;
+                    return newErrors;
+                  });
+                }}
+                className={`flex-1 p-4 border rounded-md ${dogData.gender === 'male' ? 'border-primary bg-primary/10' : 'border-gray-300'}`}
+              >
+                Male
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setDogData(prev => ({...prev, gender: 'female'}));
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors.gender;
+                    return newErrors;
+                  });
+                }}
+                className={`flex-1 p-4 border rounded-md ${dogData.gender === 'female' ? 'border-primary bg-primary/10' : 'border-gray-300'}`}
+              >
+                Female
+              </button>
+            </div>
+            {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
+            <div className="flex space-x-4">
+              <button 
+                onClick={prevStep}
+                className="flex-1 border border-gray-300 py-3 rounded-md"
+              >
+                Back
+              </button>
+              <button 
+                onClick={nextStep}
+                className="flex-1 bg-primary text-white py-3 rounded-md"
+                disabled={!dogData.gender}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      
       case 5:
         return (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold mb-4">How much does {dogData.name} weigh?</h2>
-            <input
-              type="number"
-              name="weight"
-              value={dogData.weight}
-              onChange={handleChange}
-              className={`w-full p-3 border ${errors.weight ? 'border-red-500' : 'border-gray-300'} rounded-md`}
-              placeholder="Enter weight in kg"
-              min="0"
-              max="100"
-              step="0.1"
-              required
-            />
+            <div className="relative">
+              <input
+                type="number"
+                name="weight"
+                value={dogData.weight}
+                onChange={handleChange}
+                className={`w-full p-3 border ${errors.weight ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                placeholder="Enter weight in kg"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">kg</span>
+            </div>
             {errors.weight && <p className="text-red-500 text-sm">{errors.weight}</p>}
             <div className="flex space-x-4">
               <button 
@@ -227,14 +323,67 @@ function Onboarding() {
           </div>
         );
       
-      // Resto del codice rimane simile
+      case 6:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold mb-4">Almost done!</h2>
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="font-bold mb-2">{dogData.name}'s Profile</h3>
+              <p><strong>Breed:</strong> {dogData.breed}</p>
+              <p><strong>Birthdate:</strong> {format(new Date(dogData.birthdate), 'MMMM d, yyyy')}</p>
+              <p><strong>Gender:</strong> {dogData.gender === 'male' ? 'Male' : 'Female'}</p>
+              <p><strong>Weight:</strong> {dogData.weight} kg</p>
+            </div>
+            <div className="flex space-x-4">
+              <button 
+                onClick={prevStep}
+                className="flex-1 border border-gray-300 py-3 rounded-md"
+                disabled={loading}
+              >
+                Back
+              </button>
+              <button 
+                onClick={handleSubmit}
+                className="flex-1 bg-primary text-white py-3 rounded-md"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save and Continue'}
+              </button>
+            </div>
+          </div>
+        );
       
       default:
         return null;
     }
   };
 
-  // Resto del componente rimane invariato
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-light">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full text-white text-2xl mb-4">
+            🐾
+          </div>
+          <h1 className="text-2xl font-bold">PawTracker</h1>
+          <p className="text-gray-600">Let's set up your dog's profile</p>
+        </div>
+        
+        {/* Progress indicator */}
+        <div className="mb-6">
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+            <div 
+              className="bg-primary h-2.5 rounded-full" 
+              style={{ width: `${(step / 6) * 100}%` }}
+            ></div>
+          </div>
+          <div className="text-xs text-right text-gray-500">Step {step} of 6</div>
+        </div>
+        
+        {renderStep()}
+      </div>
+    </div>
+  );
 }
 
 export default Onboarding;

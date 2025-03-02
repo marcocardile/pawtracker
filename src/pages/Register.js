@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchDogs } from '../services/firebaseService';
 
 function Register() {
   const [firstName, setFirstName] = useState('');
@@ -56,19 +55,19 @@ function Register() {
       // Combinare first name e last name per il displayName
       const fullName = `${firstName} ${lastName}`;
       
-      // Registrazione
-      const user = await register(email, password, fullName, firstName, lastName);
+      // Imposta il flag per l'onboarding prima della registrazione
+      localStorage.setItem('requiresOnboarding', 'true');
       
-      // Controlla se l'utente ha già un cane
-      const dogsData = await fetchDogs(user.uid);
+      // Registrazione utente
+      await register(email, password, fullName, firstName, lastName);
       
-      // Reindirizza all'onboarding se non ha cani
-      if (dogsData.length === 0) {
-        navigate('/onboarding');
-      } else {
-        navigate('/');
-      }
+      // Dopo registrazione riuscita, reindirizza a onboarding
+      navigate('/onboarding');
     } catch (error) {
+      // Rimuovi il flag in caso di errore durante la registrazione
+      localStorage.removeItem('requiresOnboarding');
+      
+      // Gestisci gli errori specifici
       if (error.code === 'auth/email-already-in-use') {
         setError('This email is already in use');
       } else if (error.code === 'auth/invalid-email') {
@@ -78,18 +77,22 @@ function Register() {
       } else {
         setError('Failed to create an account');
       }
-      console.error(error);
+      console.error("Registration error:", error);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light">
+    <div className="min-h-screen flex items-center justify-center bg-light px-4 sm:px-6 lg:px-8">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full text-white text-2xl mb-4">
-            🐾
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full overflow-hidden mb-4">
+            <img 
+              src="/logo192.png" 
+              alt="PawTracker Logo" 
+              className="w-16 h-16 object-contain" 
+            />
           </div>
           <h1 className="text-2xl font-bold">PawTracker</h1>
           <p className="text-gray-600">Your dog's life, organized</p>

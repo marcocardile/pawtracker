@@ -21,9 +21,10 @@ function SignUp() {
         name: result.user.displayName || '',
         email: result.user.email
       });
-      
-      // Reindirizza in base al fatto che sia un nuovo utente
+
+      // Imposta il flag per l'onboarding per i nuovi utenti
       if (isNewUser) {
+        localStorage.setItem('requiresOnboarding', 'true');
         navigate('/onboarding');
       } else {
         navigate('/');
@@ -47,11 +48,15 @@ function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light">
+    <div className="min-h-screen flex items-center justify-center bg-light px-4 sm:px-6 lg:px-8">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full text-white text-2xl mb-4">
-            🐾
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full overflow-hidden mb-4">
+            <img 
+              src="/logo192.png" 
+              alt="PawTracker Logo" 
+              className="w-16 h-16 object-contain" 
+            />
           </div>
           <h1 className="text-2xl font-bold">PawTracker</h1>
           <p className="text-gray-600">Your dog's life, organized</p>
@@ -90,7 +95,7 @@ function SignUp() {
               viewBox="0 0 24 24" 
               className="w-5 h-5 mr-2 fill-white"
             >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c1.85 0 3.48.63 4.81 1.68l-2.59 2.59C13.03 7.43 12.56 7.29 12 7.29c-2.39 0-4.33 1.95-4.33 4.33 0 2.39 1.95 4.33 4.33 4.33 1.86 0 3.4-1.16 3.97-2.73H12v-3.58h6.29c.14.77.22 1.56.22 2.42 0 3.96-2.79 6.77-6.51 6.77-3.95 0-7.18-3.18-7.18-7.18 0-3.95 3.23-7.18 7.18-7.18z"/>
+              <path d="M17.05 20.28c-.98.95-2.05.94-3.08.45-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.47C2.23 14.73 3.14 7.63 8.31 7.45c1.2.08 2.07.56 2.83.65 1.11-.3 2.17-.73 3.45-.51 1.46.12 2.55.72 3.25 1.78-2.99 1.89-2.13 5.55.63 6.82-.5 1.61-1.13 3.18-2.42 4.09zM12.03 7.25C11.88 5.02 13.69 3.18 15.77 3c.37 2.5-1.88 4.32-3.74 4.25z"/>
             </svg>
             Sign up with Apple
           </button>
