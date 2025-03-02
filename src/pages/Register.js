@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchDogs } from '../services/firebaseService';
 
 function Register() {
   const [firstName, setFirstName] = useState('');
@@ -51,10 +52,22 @@ function Register() {
     try {
       setError('');
       setLoading(true);
+      
       // Combinare first name e last name per il displayName
       const fullName = `${firstName} ${lastName}`;
-      await register(email, password, fullName, firstName, lastName);
-      navigate('/');
+      
+      // Registrazione
+      const user = await register(email, password, fullName, firstName, lastName);
+      
+      // Controlla se l'utente ha già un cane
+      const dogsData = await fetchDogs(user.uid);
+      
+      // Reindirizza all'onboarding se non ha cani
+      if (dogsData.length === 0) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
         setError('This email is already in use');
@@ -66,15 +79,18 @@ function Register() {
         setError('Failed to create an account');
       }
       console.error(error);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-light">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full text-white text-2xl mb-4">
+            🐾
+          </div>
           <h1 className="text-2xl font-bold">PawTracker</h1>
           <p className="text-gray-600">Your dog's life, organized</p>
         </div>

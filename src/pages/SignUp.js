@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../firebase';
+import { createUserDocument } from '../services/firebaseService';
 
 function SignUp() {
   const navigate = useNavigate();
@@ -11,16 +12,38 @@ function SignUp() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // Dopo registrazione con Google, vai all'onboarding
-      navigate('/onboarding');
+      
+      // Verifica se è un nuovo utente confrontando creationTime e lastSignInTime
+      const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+      
+      // Crea il documento utente se non esiste
+      await createUserDocument(result.user, {
+        name: result.user.displayName || '',
+        email: result.user.email
+      });
+      
+      // Reindirizza in base al fatto che sia un nuovo utente
+      if (isNewUser) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Google Sign-Up Error:', error);
+      
+      // Gestione degli errori
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        alert('An account already exists with a different credential. Please try another method.');
+      } else {
+        alert('Sign up failed. Please try again.');
+      }
     }
   };
 
   const handleAppleSignUp = () => {
     // Implementazione Apple Sign-In da aggiungere
     console.log('Apple Sign-Up not implemented yet');
+    alert('Apple Sign-Up is not available yet');
   };
 
   return (
