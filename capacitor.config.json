@@ -1,0 +1,7 @@
+{
+    "appId": "com.marcocardile.pawtracker",
+    "appName": "PawTracker",
+    "webDir": "build",
+    "bundledWebRuntime": false
+  }
+  
