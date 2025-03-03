@@ -1,6 +1,6 @@
 {
-    "appId": "com.marcocardile.pawtracker",
-    "appName": "PawTracker",
+    "appId": "com.marcocardile.puppy-planner",
+    "appName": "Puppy Planner",
     "webDir": "build",
     "bundledWebRuntime": false
   }

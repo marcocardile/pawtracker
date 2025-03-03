@@ -359,7 +359,7 @@ class NotificationManager {
               title: notification.title,
               body: notification.message,
               largeBody: notification.message,
-              summaryText: 'PawTracker',
+              summaryText: 'Puppy Planner',
               schedule: { at: new Date() }
             }
           ]

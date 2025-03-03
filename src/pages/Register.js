@@ -90,11 +90,11 @@ function Register() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full overflow-hidden mb-4">
             <img 
               src="/logo192.png" 
-              alt="PawTracker Logo" 
+              alt="Puppy Planner Logo" 
               className="w-16 h-16 object-contain" 
             />
           </div>
-          <h1 className="text-2xl font-bold">PawTracker</h1>
+          <h1 className="text-2xl font-bold">Puppy Planner</h1>
           <p className="text-gray-600">Your dog's life, organized</p>
         </div>
         <h2 className="text-xl font-semibold mb-4 text-center">Sign Up</h2>

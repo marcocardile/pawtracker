@@ -1,6 +1,6 @@
-# PawTracker
+# Puppy Planner
 
-PawTracker is an application for managing and tracking the daily activities and information of your furry friends.
+Puppy Planner is an application for managing and tracking the daily activities and information of your furry friends.
 
 ## Main Features
 
@@ -18,8 +18,8 @@ PawTracker is an application for managing and tracking the daily activities and 
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/marcocardile/pawtracker.git
-    cd pawtracker
+    git clone https://github.com/marcocardile/puppy-planner.git
+    cd puppy-planner
     ```
 
 2. Install dependencies:

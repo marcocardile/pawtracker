@@ -35,9 +35,9 @@ function Header() {
         <div className="container mx-auto flex justify-between items-center">
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-              <img src="/logo192.png" alt="PawTracker Logo" className="w-8 h-8 object-contain" />
+              <img src="/logo192.png" alt="Puppy Planner Logo" className="w-8 h-8 object-contain" />
             </div>
-            <span className="font-bold text-xl">PawTracker</span>
+            <span className="font-bold text-xl">Puppy Planner</span>
           </Link>
           <div className="flex items-center space-x-4">
             <button className="p-2 relative" onClick={() => setNotificationsOpen(!notificationsOpen)}>

@@ -365,7 +365,7 @@ function Onboarding() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full text-white text-2xl mb-4">
             🐾
           </div>
-          <h1 className="text-2xl font-bold">PawTracker</h1>
+          <h1 className="text-2xl font-bold">Puppy Planner</h1>
           <p className="text-gray-600">Let's set up your dog's profile</p>
         </div>
         
