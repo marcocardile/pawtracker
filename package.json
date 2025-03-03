@@ -7,6 +7,7 @@
     "@capacitor/cli": "^7.0.1",
     "@capacitor/core": "^7.0.1",
     "@capacitor/ios": "^7.0.1",
+    "@capacitor/local-notifications": "^7.0.0",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@testing-library/dom": "^10.4.0",
@@ -28,8 +29,10 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "PORT=3001 react-scripts start",
+    "capacitor-server": "node capacitor-server.js",
+    "dev": "concurrently \"npm run start\" \"npm run capacitor-server\"",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -52,8 +55,17 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^9.21.0",
     "autoprefixer": "^10.4.14",
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.4",
+    "express": "^4.21.2",
+    "globals": "^16.0.0",
+    "http-proxy-middleware": "^3.0.3",
     "postcss": "^8.4.23",
-    "tailwindcss": "^3.3.0"
+    "tailwindcss": "^3.3.0",
+    "typescript-eslint": "^8.26.0"
   }
 }

@@ -14,6 +14,7 @@ import {
   updateDog
 } from '../services/firebaseService';
 import DogWeightChart from '../components/health/DogWeightChart';
+import DeleteDogModal from '../components/dogs/DeleteDogModal';
 
 function DogDetail() {
   const { dogId } = useParams();
@@ -29,6 +30,7 @@ function DogDetail() {
   const [vaccineRecords, setVaccineRecords] = useState([]);
   const [medRecords, setMedRecords] = useState([]);
   const [vetRecords, setVetRecords] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Modal states
   const [showAddWeightModal, setShowAddWeightModal] = useState(false);
@@ -439,12 +441,22 @@ function DogDetail() {
               </span>
             </div>
           </div>
-          <button 
-            onClick={() => navigate(`/dogs/${dogId}/edit`)}
-            className="p-2 bg-gray-100 rounded-full"
-          >
-            ✏️
-          </button>
+          <div className="flex">
+            <button 
+              onClick={() => navigate(`/dogs/${dogId}/edit`)}
+              className="p-2 bg-gray-100 rounded-full mr-2"
+              aria-label="Edit dog profile"
+            >
+              ✏️
+            </button>
+            <button 
+              onClick={() => setShowDeleteModal(true)}
+              className="p-2 bg-red-100 text-red-500 rounded-full"
+              aria-label="Delete dog profile"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
       
@@ -466,7 +478,7 @@ function DogDetail() {
           </button>
           <button 
             className={`flex-1 py-3 text-center ${activeTab === 'activities' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('activities')}
+            onClick={() => setActiveTab('activities ')}
           >
             Activities
           </button>
@@ -1140,6 +1152,14 @@ function DogDetail() {
           </div>
         </div>
       )}
+
+      {/* Delete Dog Modal */}
+      <DeleteDogModal 
+        dogId={dogId}
+        dogName={dog?.name}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </>
   );
 }

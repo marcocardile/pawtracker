@@ -13,7 +13,7 @@ function Navigation() {
   const [notchPadding, setNotchPadding] = useState('');
 
   useEffect(() => {
-    setNotchPadding(hasNotch() ? "pb-6" : "pb-3");
+    setNotchPadding(hasNotch() ? "pb-4" : "pb-2");
   }, []);
 
   const isActive = (path) => {

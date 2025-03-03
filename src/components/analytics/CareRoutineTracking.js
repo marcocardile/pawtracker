@@ -41,7 +41,7 @@ function CareRoutineTracking({ dogId }) {
     };
     
     loadRoutineData();
-  }, [currentUser, dogId, selectedWeek]);
+  }, [currentUser, dogId, selectedWeek, calculateRoutineStatistics]);
 
   // Calculate routine statistics
   const calculateRoutineStatistics = (activities) => {

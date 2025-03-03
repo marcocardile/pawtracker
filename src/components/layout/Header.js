@@ -16,8 +16,10 @@ function Header() {
   const [notchPadding, setNotchPadding] = useState('');
 
   useEffect(() => {
-    setNotchPadding(hasNotch() ? "pt-10" : "pt-6"); // RIDOTTO rispetto a prima
+    setNotchPadding(hasNotch() ? "pt-4" : "pt-4"); // RIDOTTO rispetto a prima
   }, []);
+  console.log("Is Notch Device:", hasNotch); // Aggiungi un log per vedere se la condizione viene rispettata
+
 
   const getUserInitials = () => {
     if (!currentUser || !currentUser.displayName) return 'U';

@@ -10,12 +10,59 @@ function NotificationsPanel({ isOpen, onClose }) {
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect if the device is mobile/tablet
+  useEffect(() => {
+    const checkDevice = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      
+      // Simple check for mobile or tablet
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      
+      // Additional check for viewport width
+      const isSmallViewport = window.innerWidth <= 1024; // Tablets and phones are typically <= 1024px
+      
+      setIsMobile(isMobileDevice || isSmallViewport);
+    };
+
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    
+    return () => {
+      window.removeEventListener('resize', checkDevice);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen && currentUser) {
       loadNotifications();
     }
   }, [isOpen, currentUser]);
+
+  // Handle touch events for swipe-down to close (mobile only)
+  const handleTouchStart = (e) => {
+    if (!isMobile) return;
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isMobile) return;
+    setTouchEnd(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isMobile) return;
+    
+    if (touchStart && touchEnd && touchStart < touchEnd && touchEnd - touchStart > 100) {
+      // Swipe down detected
+      onClose();
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -114,17 +161,36 @@ function NotificationsPanel({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
-      
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-lg flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/50">
+      <div 
+        className={`${isMobile 
+          ? 'absolute bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-lg flex flex-col max-h-[90%] h-[85%]' 
+          : 'absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-lg flex flex-col h-full'
+        }`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Drag handle - only shown on mobile */}
+        {isMobile && (
+          <div className="flex justify-center py-2">
+            <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+          </div>
+        )}
+        
+        {/* Header */}
+        <div className="px-4 py-2 border-b flex justify-between items-center">
           <h2 className="text-lg font-bold">Notifications</h2>
-          <button onClick={onClose} className="p-2">
-            &times;
+          <button 
+            onClick={onClose} 
+            className="p-2 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+            aria-label="Close notifications"
+          >
+            <span className="text-2xl">&times;</span>
           </button>
         </div>
         
+        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center items-center h-40">
@@ -133,7 +199,8 @@ function NotificationsPanel({ isOpen, onClose }) {
           ) : notifications.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
               <div className="text-4xl mb-2">🔔</div>
-              <p>No notifications</p>
+              <p className="font-medium">No notifications</p>
+              <p className="text-sm mt-1">You're all caught up!</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -143,7 +210,7 @@ function NotificationsPanel({ isOpen, onClose }) {
                   className={`p-4 hover:bg-gray-50 flex items-start cursor-pointer ${!notification.isRead ? 'bg-blue-50' : ''}`}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${getPriorityColor(notification.priority)} border-l-4`}>
+                  <div className={`min-w-10 h-10 rounded-full flex items-center justify-center mr-3 ${getPriorityColor(notification.priority)} border-l-4`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div className="flex-1">
@@ -163,9 +230,10 @@ function NotificationsPanel({ isOpen, onClose }) {
                     </div>
                   </div>
                   <button
-                    className="ml-2 text-gray-400 hover:text-gray-600 p-1"
+                    className="ml-2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
                     onClick={(e) => handleDismiss(e, notification)}
                     title="Dismiss"
+                    aria-label="Dismiss notification"
                   >
                     &times;
                   </button>

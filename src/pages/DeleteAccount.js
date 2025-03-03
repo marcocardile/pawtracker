@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { db, auth } from '../firebase';
+import { db, /*auth*/ } from '../firebase';
 
 function DeleteAccount() {
   const { currentUser, logout } = useAuth();

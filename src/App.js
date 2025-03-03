@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
-import { db } from './firebase';
+// import { db } from './firebase';
+import notificationManager from './services/notificationManager';
 
 // Pagine principali
 import Home from './pages/Home';
@@ -108,6 +109,22 @@ function AuthenticatedRoutes() {
 
 function AppContent() {
   const { currentUser, loading } = useAuth();
+
+  // Inizializza il gestore delle notifiche quando l'utente è loggato
+  useEffect(() => {
+    if (currentUser) {
+      // Inizializza il gestore delle notifiche con l'ID dell'utente corrente
+      notificationManager.initialize(currentUser.uid);
+    } else {
+      // Ferma il gestore delle notifiche quando l'utente si disconnette
+      notificationManager.stop();
+    }
+    
+    // Cleanup function
+    return () => {
+      notificationManager.stop();
+    };
+  }, [currentUser]);
 
   // Schermo di caricamento iniziale
   if (loading) {

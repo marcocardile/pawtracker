@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   server: {
     url: 'http://192.168.1.73:3000',
     cleartext: true
+  },
+  android: {
+    allowMixedContent: true
+  },
+  ios: {
+    contentInset: 'always',
+    limitsNavigationsToAppBoundDomains: true
   }
 };
 
